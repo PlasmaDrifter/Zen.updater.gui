@@ -21,3 +21,20 @@
 */datareporting/archived/*
 */sessionstore-backups/*
 */zen-sessions-backup/*
+
+# Internal Chrome IndexedDB (Mozilla remote settings, offline translations, activity stream)
+*/storage/permanent/chrome/idb/*
+*/storage/permanent/chrome/idb
+
+# Website icon caches (auto-regenerated on visit)
+*/favicons.sqlite*
+
+# Mozilla classification and certificate revocation caches (auto-updated)
+*/domain_to_categories.sqlite*
+*/security_state/*
+*/security_state
+
+# Crash logs and telemetry
+*/crashes/*
+*/minidumps/*
+*/saved-telemetry-pings/*

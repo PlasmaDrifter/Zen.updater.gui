@@ -24,7 +24,7 @@ Zen Browser on Linux is frequently distributed as an official portable tarball r
 
 - **Direct GitHub Releases Tracking**: Queries GitHub's official release endpoint directly to obtain authoritative version metadata without API rate limits.
 - **Side-by-Side Version Card**: Immediate visual comparison of the currently installed version against the latest available release, including release dates.
-- **Pre-Update Profile Safety Snapshot**: Automatically archives `~/.zen` using multi-threaded `zstd` compression prior to updating, while excluding volatile browser caches (`cache2`, `startupCache`). Automatically maintains a rolling 2-backup rotation in `~/.zen-backups/`.
+- **Pre-Update Profile Safety Snapshot**: Automatically archives `~/.zen` using multi-threaded `zstd` compression prior to updating, while intelligently excluding volatile browser caches (`cache2`, `startupCache`, remote settings, disposable site icon caches, and crash logs) to keep snapshots fast and lightweight (~300 MB). Automatically maintains a rolling 2-backup rotation in `~/.zen-backups/`.
 - **Multi-Profile Launching with Staggered Windows**:
   - Dynamically discovers all configured profiles from `~/.zen/profiles.ini`.
   - Integrates with dedicated desktop launchers (`.desktop` files) for custom isolated web apps.

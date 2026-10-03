@@ -25,7 +25,7 @@ from PyQt6.QtWidgets import (
     QMessageBox, QGridLayout, QCheckBox, QScrollArea, QComboBox
 )
 
-APP_VERSION = "v1.0.0"
+APP_VERSION = "v1.0.1"
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
