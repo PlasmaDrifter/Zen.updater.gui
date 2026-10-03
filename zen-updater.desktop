@@ -1,0 +1,12 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Zen Browser Updater
+GenericName=Browser Updater
+Comment=Check, backup, update, and launch Zen Browser profiles
+Exec=zen_updater_gui.py
+Icon=zen-browser
+Terminal=false
+Categories=Network;WebBrowser;Utility;
+Keywords=zen;browser;update;updater;upgrade;
+StartupNotify=true

@@ -1,0 +1,7 @@
+[Unit]
+Description=Check Zen Browser for Updates
+After=graphical-session.target
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/check_zen_update.sh

@@ -1,0 +1,23 @@
+# Zen Browser Profile Backup Exclusions
+# Excludes transient caches, lock files, shaders, and temporary data
+*/cache2/*
+*/startupCache/*
+*/Crash Reports/*
+*/Pending Pings/*
+*/jumpListCache/*
+*/thumbnails/*
+*/to-be-removed/*
+*/temporary/*
+*/parent.lock
+*/lock
+*/.parentlock
+*/safebrowsing/*
+*/shader-cache/*
+*/storage/default/*/cache/*
+*/storage/default/*/cache
+*/gmp-widevinecdm/*
+*/gmp-gmpopenh264/*
+*/chrome_debugger_profile/*
+*/datareporting/archived/*
+*/sessionstore-backups/*
+*/zen-sessions-backup/*
