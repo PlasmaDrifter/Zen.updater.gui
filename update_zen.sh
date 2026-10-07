@@ -71,7 +71,20 @@ if [ "${CURRENT_VER}" == "${LATEST_VER}" ]; then
     else
         read -r -p "Do you want to re-install/refresh anyway? [y/N] " FORCE_UPDATE
         if [[ ! "${FORCE_UPDATE}" =~ ^[Yy] ]]; then
-            echo "Exiting."
+            echo "Refreshing profile links and policies..."
+            for custom_bin in zen-youtube qbittorrent-webui zen-qbittorrent zen-bin; do
+                rm -f "${INSTALL_DIR}/${custom_bin}" 2>/dev/null || true
+                ln "${INSTALL_DIR}/zen" "${INSTALL_DIR}/${custom_bin}" 2>/dev/null || cp -a "${INSTALL_DIR}/zen" "${INSTALL_DIR}/${custom_bin}" 2>/dev/null || true
+            done
+            mkdir -p "${INSTALL_DIR}/distribution"
+            cat << 'EOF' > "${INSTALL_DIR}/distribution/policies.json"
+{
+  "policies": {
+    "DisableAppUpdate": true
+  }
+}
+EOF
+            echo "Profile links and policies are up to date. Exiting."
             exit 0
         fi
     fi
@@ -80,7 +93,7 @@ fi
 # 2. Close / terminate all running Zen instances
 if pgrep -f "${INSTALL_DIR}" > /dev/null 2>&1 || pgrep -x "zen|zen-bin|zen-browser|zen-youtube|qbittorrent-web.*" > /dev/null 2>&1; then
     echo -e "\n${CYAN}Closing all running Zen Browser instances...${NC}"
-    killall zen zen-youtube qbittorrent-webui zen-bin zen-browser 2>/dev/null || true
+    killall zen zen-youtube qbittorrent-webui qbittorrent-web zen-bin zen-browser 2>/dev/null || true
     pkill -f "${INSTALL_DIR}" 2>/dev/null || true
 
     # Wait up to 5 seconds for clean database/session flush
@@ -94,7 +107,7 @@ if pgrep -f "${INSTALL_DIR}" > /dev/null 2>&1 || pgrep -x "zen|zen-bin|zen-brows
     # Force kill if any process is still hanging
     if pgrep -f "${INSTALL_DIR}" > /dev/null 2>&1 || pgrep -x "zen|zen-bin|zen-browser|zen-youtube|qbittorrent-web.*" > /dev/null 2>&1; then
         echo -e "${YELLOW}Force terminating remaining processes...${NC}"
-        killall -9 zen zen-youtube qbittorrent-webui zen-bin zen-browser 2>/dev/null || true
+        killall -9 zen zen-youtube qbittorrent-webui qbittorrent-web zen-bin zen-browser 2>/dev/null || true
         pkill -9 -f "${INSTALL_DIR}" 2>/dev/null || true
         sleep 1
     fi
@@ -161,7 +174,8 @@ cp -a "${TEMP_DIR}/zen/"* "${INSTALL_DIR}/"
 # 5. Re-link isolated profile binaries (CRITICAL for taskbar & icon stability)
 echo -e "\n${CYAN}[3/3] Re-linking isolated profile binaries...${NC}"
 for custom_bin in zen-youtube qbittorrent-webui zen-qbittorrent zen-bin; do
-    ln -f "${INSTALL_DIR}/zen" "${INSTALL_DIR}/${custom_bin}" 2>/dev/null || true
+    rm -f "${INSTALL_DIR}/${custom_bin}" 2>/dev/null || true
+    ln "${INSTALL_DIR}/zen" "${INSTALL_DIR}/${custom_bin}" 2>/dev/null || cp -a "${INSTALL_DIR}/zen" "${INSTALL_DIR}/${custom_bin}" 2>/dev/null || true
 done
 
 # Dynamically discover and re-link any custom profile binaries referenced in user desktop files
@@ -170,10 +184,21 @@ if [ -d "${HOME}/.local/share/applications" ]; then
         [ -f "${dfile}" ] || continue
         target_bin=$(grep -E "^Exec=${INSTALL_DIR}/" "${dfile}" 2>/dev/null | head -n1 | sed -E "s|^Exec=${INSTALL_DIR}/([^ \"']+).*|\1|" || true)
         if [ -n "${target_bin}" ] && [ "${target_bin}" != "zen" ]; then
-            ln -f "${INSTALL_DIR}/zen" "${INSTALL_DIR}/${target_bin}" 2>/dev/null || true
+            rm -f "${INSTALL_DIR}/${target_bin}" 2>/dev/null || true
+            ln "${INSTALL_DIR}/zen" "${INSTALL_DIR}/${target_bin}" 2>/dev/null || cp -a "${INSTALL_DIR}/zen" "${INSTALL_DIR}/${target_bin}" 2>/dev/null || true
         fi
     done
 fi
+
+# 6. Ensure in-browser background updater does not desync profile hardlinks
+mkdir -p "${INSTALL_DIR}/distribution"
+cat << 'EOF' > "${INSTALL_DIR}/distribution/policies.json"
+{
+  "policies": {
+    "DisableAppUpdate": true
+  }
+}
+EOF
 
 # Refresh desktop caches
 update-desktop-database "${HOME}/.local/share/applications" >/dev/null 2>&1 || true

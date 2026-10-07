@@ -250,6 +250,85 @@ class ZenProfileManager:
         except Exception as e:
             print("Error saving settings:", e)
 
+    def sync_profile_binaries(self):
+        """Ensures all isolated profile executables match the main zen binary hardlink."""
+        zen_bin = os.path.join(self.install_dir, "zen")
+        if not os.path.isfile(zen_bin):
+            return []
+
+        try:
+            zen_stat = os.stat(zen_bin)
+        except OSError:
+            return []
+
+        target_bins = {"zen-youtube", "qbittorrent-webui", "zen-qbittorrent", "zen-bin"}
+
+        desktop_dir = os.path.expanduser("~/.local/share/applications")
+        if os.path.isdir(desktop_dir):
+            for dfile in glob.glob(os.path.join(desktop_dir, "*.desktop")):
+                try:
+                    with open(dfile, "r", encoding="utf-8", errors="ignore") as f:
+                        for line in f:
+                            if line.startswith(f"Exec={self.install_dir}/"):
+                                m = re.match(rf"^Exec={re.escape(self.install_dir)}/([^\s\"']+)", line)
+                                if m:
+                                    tbin = m.group(1)
+                                    if tbin and tbin != "zen":
+                                        target_bins.add(tbin)
+                                break
+                except Exception:
+                    pass
+
+        relinked = []
+        for tbin in sorted(target_bins):
+            tpath = os.path.join(self.install_dir, tbin)
+            needs_link = False
+            if not os.path.exists(tpath):
+                needs_link = True
+            else:
+                try:
+                    tstat = os.stat(tpath)
+                    if tstat.st_ino != zen_stat.st_ino or tstat.st_size != zen_stat.st_size:
+                        needs_link = True
+                except OSError:
+                    needs_link = True
+
+            if needs_link:
+                try:
+                    if os.path.exists(tpath):
+                        os.unlink(tpath)
+                    os.link(zen_bin, tpath)
+                    relinked.append(tbin)
+                except Exception:
+                    try:
+                        import shutil
+                        shutil.copy2(zen_bin, tpath)
+                        relinked.append(tbin)
+                    except Exception:
+                        pass
+
+        self.ensure_update_policy()
+        return relinked
+
+    def ensure_update_policy(self):
+        """Ensures distribution/policies.json disables internal background updates."""
+        dist_dir = os.path.join(self.install_dir, "distribution")
+        policy_file = os.path.join(dist_dir, "policies.json")
+        try:
+            os.makedirs(dist_dir, exist_ok=True)
+            if not os.path.isfile(policy_file):
+                with open(policy_file, "w", encoding="utf-8") as f:
+                    json.dump({"policies": {"DisableAppUpdate": True}}, f, indent=2)
+            else:
+                with open(policy_file, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                if not data.get("policies", {}).get("DisableAppUpdate"):
+                    data.setdefault("policies", {})["DisableAppUpdate"] = True
+                    with open(policy_file, "w", encoding="utf-8") as f:
+                        json.dump(data, f, indent=2)
+        except Exception:
+            pass
+
 
 class ZenTimerManager:
     """Manages the user-level systemd update checker timer and service."""
@@ -528,6 +607,7 @@ class ZenUpdaterWindow(QMainWindow):
         self.profile_mgr = ZenProfileManager()
         self.profiles = self.profile_mgr.get_profiles()
         self.selected_profiles = self.profile_mgr.load_selected_profiles(self.profiles)
+        self.profile_mgr.sync_profile_binaries()
 
         self.timer_mgr = ZenTimerManager()
         self.timer_status = self.timer_mgr.get_status()
@@ -1229,6 +1309,9 @@ class ZenUpdaterWindow(QMainWindow):
             self.btn_run.setText("Run Update")
             self.btn_run.setEnabled(True)
         else:
+            relinked = self.profile_mgr.sync_profile_binaries()
+            if relinked:
+                self.append_log(f"Auto-synced profile executables: {', '.join(relinked)}\n")
             self.status_banner.setText(f"Zen Browser is up to date ({result['current_version']})")
             self.status_banner.setStyleSheet("""
                 QLabel {
@@ -1241,8 +1324,8 @@ class ZenUpdaterWindow(QMainWindow):
                     border: 1px solid #2a4c3a;
                 }
             """)
-            self.btn_run.setText("Run Update")
-            self.btn_run.setEnabled(False)
+            self.btn_run.setText("Reinstall / Refresh")
+            self.btn_run.setEnabled(True)
 
     def run_update(self):
         if not os.path.isfile(UPDATE_SCRIPT):
@@ -1252,11 +1335,19 @@ class ZenUpdaterWindow(QMainWindow):
         dismiss_zen_notification()
 
         backup_note = "A safety backup of all your profiles will be created before updating.\n\n" if self.chk_backup.isChecked() else ""
-        confirm_msg = (
-            f"This will close any running Zen Browser windows and install the update.\n\n"
-            f"{backup_note}"
-            "Do you want to proceed?"
-        )
+        if self.btn_run.text() == "Reinstall / Refresh":
+            confirm_msg = (
+                f"Zen Browser is already on the latest version.\n\n"
+                f"This will re-install core files, re-link isolated profile binaries, and apply policy safeguards.\n\n"
+                f"{backup_note}"
+                "Do you want to proceed?"
+            )
+        else:
+            confirm_msg = (
+                f"This will close any running Zen Browser windows and install the update.\n\n"
+                f"{backup_note}"
+                "Do you want to proceed?"
+            )
         reply = QMessageBox.question(
             self,
             "Confirm Update",
@@ -1364,6 +1455,9 @@ class ZenUpdaterWindow(QMainWindow):
 
         if exit_code == 0:
             dismiss_zen_notification()
+            relinked = self.profile_mgr.sync_profile_binaries()
+            if relinked:
+                self.append_log(f"Refreshed profile executables: {', '.join(relinked)}\n")
             self.progress_bar.setValue(100)
             self.progress_bar.setFormat("Update Complete (100%)")
             self.status_banner.setText("Zen Browser updated successfully!")
@@ -1402,6 +1496,9 @@ class ZenUpdaterWindow(QMainWindow):
 
     def launch_zen(self):
         dismiss_zen_notification()
+        relinked = self.profile_mgr.sync_profile_binaries()
+        if relinked:
+            self.append_log(f"Auto-synced profile executables: {', '.join(relinked)}\n")
         zen_bin = os.path.join(self.profile_mgr.install_dir, "zen")
         if not os.path.isfile(zen_bin):
             import shutil
