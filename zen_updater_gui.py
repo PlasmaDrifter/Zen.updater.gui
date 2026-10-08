@@ -17,15 +17,15 @@ import urllib.request
 import urllib.error
 from datetime import datetime
 
-from PyQt6.QtCore import Qt, QThread, pyqtSignal, QProcess, QTimer
+from PyQt6.QtCore import Qt, QThread, pyqtSignal, QProcess, QTimer, QPoint
 from PyQt6.QtGui import QIcon, QFont, QPixmap
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QPushButton, QProgressBar, QTextEdit, QFrame, QSizePolicy,
-    QMessageBox, QGridLayout, QCheckBox, QScrollArea, QComboBox
+    QMessageBox, QGridLayout, QCheckBox, QScrollArea, QComboBox, QToolTip
 )
 
-APP_VERSION = "v1.0.2"
+APP_VERSION = "v1.0.3"
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
@@ -74,6 +74,67 @@ def find_app_ini():
 ICON_PATH = find_zen_icon()
 UPDATE_SCRIPT = find_update_script()
 APP_INI = find_app_ini()
+
+CHECKMARK_ICON_PATH = os.path.join(SCRIPT_DIR, "assets", "checkmark.png")
+
+
+def ensure_checkmark_icon():
+    """Ensure the checkmark PNG icon exists in assets."""
+    if os.path.isfile(CHECKMARK_ICON_PATH):
+        return CHECKMARK_ICON_PATH
+    try:
+        from PyQt6.QtGui import QPixmap, QPainter, QColor, QPen
+        from PyQt6.QtCore import Qt
+        os.makedirs(os.path.dirname(CHECKMARK_ICON_PATH), exist_ok=True)
+        pix = QPixmap(14, 14)
+        pix.fill(Qt.GlobalColor.transparent)
+        p = QPainter(pix)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        pen = QPen(QColor('#ffffff'), 2.2, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap, Qt.PenJoinStyle.RoundJoin)
+        p.setPen(pen)
+        p.drawLine(2, 7, 5, 11)
+        p.drawLine(5, 11, 12, 3)
+        p.end()
+        pix.save(CHECKMARK_ICON_PATH, 'PNG')
+    except Exception:
+        pass
+    return CHECKMARK_ICON_PATH
+
+
+ensure_checkmark_icon()
+
+CHECKBOX_QSS = f"""
+    QCheckBox {{
+        color: #e6edf3;
+        font-size: 13px;
+        spacing: 10px;
+        padding: 2px 0px;
+    }}
+    QCheckBox:disabled {{
+        color: #79c0ff;
+    }}
+    QCheckBox::indicator {{
+        width: 18px;
+        height: 18px;
+        border-radius: 4px;
+        border: 1.5px solid #6e7681;
+        background-color: #21262d;
+    }}
+    QCheckBox::indicator:hover {{
+        border-color: #58a6ff;
+        background-color: #30363d;
+    }}
+    QCheckBox::indicator:checked {{
+        background-color: #1f6feb;
+        border-color: #388bfd;
+        image: url("{CHECKMARK_ICON_PATH}");
+    }}
+    QCheckBox::indicator:checked:disabled {{
+        background-color: #238636;
+        border-color: #2ea043;
+        image: url("{CHECKMARK_ICON_PATH}");
+    }}
+"""
 
 
 def dismiss_zen_notification():
@@ -147,8 +208,6 @@ class ZenProfileManager:
                     display_name = "YouTube (zen-YT)"
                 elif name == "Qbittorrent":
                     display_name = "qBittorrent WebUI (Qbittorrent)"
-                elif is_def:
-                    display_name = "Main Browser"
                 elif name == "Default (twilight)":
                     display_name = "Twilight Profile"
                 elif name == "Default Profile":
@@ -162,6 +221,10 @@ class ZenProfileManager:
                     display_name = f"{dname} ({name})" if dname and dname != name else (dname or name)
                 else:
                     display_name = name
+
+                if is_def:
+                    if not display_name.lower().endswith("default"):
+                        display_name = f"{display_name} - Default"
 
                 profiles.append({
                     "name": name,
@@ -235,10 +298,6 @@ class ZenProfileManager:
             for p in profiles:
                 if p["is_default"] or p["desktop_file"]:
                     selected.add(p["name"])
-
-        # Default profile must always be selected
-        if default_profile_name:
-            selected.add(default_profile_name)
 
         return selected
 
@@ -749,37 +808,12 @@ class ZenUpdaterWindow(QMainWindow):
 
         self.chk_backup = QCheckBox("Backup all profiles before updating")
         self.chk_backup.setChecked(True)
-        self.chk_backup.setStyleSheet("""
-            QCheckBox {
-                font-size: 12px;
-                color: #e6edf3;
-            }
-            QCheckBox::indicator {
-                width: 16px;
-                height: 16px;
-                border-radius: 4px;
-                border: 1px solid #484f58;
-                background-color: #0d1117;
-            }
-            QCheckBox::indicator:hover {
-                border-color: #58a6ff;
-            }
-            QCheckBox::indicator:checked {
-                background-color: #1f6feb;
-                border-color: #388bfd;
-            }
-        """)
-
-        btn_backup_help = QPushButton("?")
-        btn_backup_help.setFixedSize(18, 18)
-        btn_backup_help.setCursor(Qt.CursorShape.PointingHandCursor)
-        btn_backup_help.setToolTip(
-            "<b>Profile Safety Backup Details:</b><br><br>"
-            "• <b>Location:</b> Stored in <code>~/.zen-backups/</code><br>"
-            "• <b>Auto-Pruned:</b> Automatically retains only the <b>2 most recent</b> snapshots so backups never accumulate.<br>"
-            "• <b>Coverage:</b> Backs up all profiles using multi-threaded <code>zstd</code> compression while excluding transient cache files."
-        )
-        btn_backup_help.setStyleSheet("""
+        self.chk_backup.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.chk_backup.setStyleSheet(CHECKBOX_QSS)
+        self.btn_backup_help = QPushButton("?")
+        self.btn_backup_help.setFixedSize(18, 18)
+        self.btn_backup_help.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_backup_help.setStyleSheet("""
             QPushButton {
                 background-color: #21262d;
                 color: #8b949e;
@@ -795,46 +829,12 @@ class ZenUpdaterWindow(QMainWindow):
                 border-color: #58a6ff;
             }
         """)
-        btn_backup_help.clicked.connect(self.show_backup_info)
+        self.btn_backup_help.clicked.connect(self.show_backup_info)
 
         backup_layout.addWidget(self.chk_backup)
-        backup_layout.addWidget(btn_backup_help)
+        backup_layout.addWidget(self.btn_backup_help)
         backup_layout.addStretch()
         main_layout.addLayout(backup_layout)
-
-        # Inline Expandable Backup Info Card (Crash-Proof)
-        self.backup_info_frame = QFrame()
-        self.backup_info_frame.setStyleSheet("""
-            QFrame {
-                background-color: #161b22;
-                border: 1px solid #30363d;
-                border-radius: 6px;
-            }
-        """)
-        backup_info_layout = QVBoxLayout(self.backup_info_frame)
-        backup_info_layout.setContentsMargins(12, 10, 12, 10)
-        backup_info_layout.setSpacing(5)
-
-        info_header = QLabel("PROFILE SAFETY BACKUP DETAILS")
-        info_header.setStyleSheet("color: #58a6ff; font-size: 10px; font-weight: bold; border: none; background: transparent;")
-        backup_info_layout.addWidget(info_header)
-
-        info_b1 = QLabel("• <b>Storage Location:</b> <code>~/.zen-backups/</code>")
-        info_b1.setStyleSheet("color: #c9d1d9; font-size: 11px; border: none; background: transparent;")
-        backup_info_layout.addWidget(info_b1)
-
-        info_b2 = QLabel("• <b>Auto-Pruned:</b> Automatically keeps only the <b>2 most recent</b> snapshots so backups never accumulate.")
-        info_b2.setStyleSheet("color: #c9d1d9; font-size: 11px; border: none; background: transparent;")
-        info_b2.setWordWrap(True)
-        backup_info_layout.addWidget(info_b2)
-
-        info_b3 = QLabel("• <b>Coverage:</b> Archives all profiles, settings, and tabs in <code>~/.zen</code> using multi-threaded <code>zstd</code> compression while excluding transient browser cache files.")
-        info_b3.setStyleSheet("color: #c9d1d9; font-size: 11px; border: none; background: transparent;")
-        info_b3.setWordWrap(True)
-        backup_info_layout.addWidget(info_b3)
-
-        self.backup_info_frame.setVisible(False)
-        main_layout.addWidget(self.backup_info_frame)
 
         # 5. Action Buttons
         button_layout = QHBoxLayout()
@@ -849,18 +849,22 @@ class ZenUpdaterWindow(QMainWindow):
         self.btn_run.setEnabled(False)
         self.btn_run.setStyleSheet("""
             QPushButton {
-                background-color: #1e70bf;
-                color: white;
+                background-color: #238636;
+                color: #ffffff;
                 font-weight: bold;
+                font-size: 12px;
+                border: 1px solid #2ea043;
                 border-radius: 5px;
-                padding: 6px 16px;
+                padding: 6px 18px;
             }
             QPushButton:hover {
-                background-color: #2582dd;
+                background-color: #2ea043;
+                border-color: #3fb950;
             }
             QPushButton:disabled {
-                background-color: #4a545e;
-                color: #8e99a4;
+                background-color: #21262d;
+                color: #6e7681;
+                border-color: #30363d;
             }
         """)
         self.btn_run.clicked.connect(self.run_update)
@@ -911,34 +915,7 @@ class ZenUpdaterWindow(QMainWindow):
                 border: 1px solid #30363d;
                 border-radius: 8px;
             }
-            QCheckBox {
-                color: #e6edf3;
-                font-size: 13px;
-                spacing: 10px;
-                padding: 2px 0px;
-            }
-            QCheckBox:disabled {
-                color: #79c0ff;
-            }
-            QCheckBox::indicator {
-                width: 18px;
-                height: 18px;
-                border-radius: 4px;
-                border: 1px solid #484f58;
-                background-color: #0d1117;
-            }
-            QCheckBox::indicator:hover {
-                border-color: #58a6ff;
-            }
-            QCheckBox::indicator:checked {
-                background-color: #1f6feb;
-                border-color: #388bfd;
-            }
-            QCheckBox::indicator:checked:disabled {
-                background-color: #238636;
-                border-color: #2ea043;
-            }
-        """)
+""" + CHECKBOX_QSS)
         profile_layout = QVBoxLayout(self.profile_frame)
         profile_layout.setContentsMargins(16, 12, 16, 12)
         profile_layout.setSpacing(8)
@@ -957,24 +934,16 @@ class ZenUpdaterWindow(QMainWindow):
         grid_col = 0
         for p in self.profiles:
             pname = p["name"]
-            if p["is_default"]:
-                chk = QCheckBox(f"{p['display_name']}  —  Default (Always Launched)")
-                chk.setChecked(True)
-                chk.setEnabled(False)
-                chk.setStyleSheet("font-weight: bold; color: #58a6ff;")
-                self.profile_checkboxes[pname] = chk
-                profile_layout.addWidget(chk)
-            else:
-                chk = QCheckBox(p["display_name"])
-                chk.setChecked(pname in self.selected_profiles)
-                chk.toggled.connect(lambda checked, name=pname: self.on_profile_toggled(name, checked))
-                self.profile_checkboxes[pname] = chk
-                grid_layout.addWidget(chk, grid_row, grid_col)
-                grid_col += 1
-                if grid_col >= 2:
-                    grid_col = 0
-                    grid_row += 1
-
+            chk = QCheckBox(p["display_name"])
+            chk.setCursor(Qt.CursorShape.PointingHandCursor)
+            chk.setChecked(pname in self.selected_profiles)
+            chk.toggled.connect(lambda checked, name=pname: self.on_profile_toggled(name, checked))
+            self.profile_checkboxes[pname] = chk
+            grid_layout.addWidget(chk, grid_row, grid_col)
+            grid_col += 1
+            if grid_col >= 2:
+                grid_col = 0
+                grid_row += 1
         profile_layout.addLayout(grid_layout)
 
         self.profiles_expanded = False
@@ -1016,26 +985,7 @@ class ZenUpdaterWindow(QMainWindow):
                 border: 1px solid #30363d;
                 border-radius: 8px;
             }
-            QCheckBox {
-                color: #e6edf3;
-                font-size: 13px;
-                spacing: 10px;
-                padding: 2px 0px;
-            }
-            QCheckBox::indicator {
-                width: 18px;
-                height: 18px;
-                border-radius: 4px;
-                border: 1px solid #484f58;
-                background-color: #0d1117;
-            }
-            QCheckBox::indicator:hover {
-                border-color: #58a6ff;
-            }
-            QCheckBox::indicator:checked {
-                background-color: #1f6feb;
-                border-color: #388bfd;
-            }
+""" + CHECKBOX_QSS + """
             QComboBox {
                 background-color: #0d1117;
                 color: #e6edf3;
@@ -1066,6 +1016,7 @@ class ZenUpdaterWindow(QMainWindow):
 
         # Enable / Disable Checkbox
         self.chk_timer_enable = QCheckBox("Enable periodic background update checks")
+        self.chk_timer_enable.setCursor(Qt.CursorShape.PointingHandCursor)
         self.chk_timer_enable.setChecked(self.timer_status["active"] or self.timer_status["enabled"])
         self.chk_timer_enable.toggled.connect(self.on_timer_enable_toggled)
         timer_layout.addWidget(self.chk_timer_enable)
@@ -1307,6 +1258,26 @@ class ZenUpdaterWindow(QMainWindow):
                 }
             """)
             self.btn_run.setText("Run Update")
+            self.btn_run.setStyleSheet("""
+            QPushButton {
+                background-color: #238636;
+                color: #ffffff;
+                font-weight: bold;
+                font-size: 12px;
+                border: 1px solid #2ea043;
+                border-radius: 5px;
+                padding: 6px 18px;
+            }
+            QPushButton:hover {
+                background-color: #2ea043;
+                border-color: #3fb950;
+            }
+            QPushButton:disabled {
+                background-color: #21262d;
+                color: #6e7681;
+                border-color: #30363d;
+            }
+            """)
             self.btn_run.setEnabled(True)
         else:
             relinked = self.profile_mgr.sync_profile_binaries()
@@ -1324,7 +1295,28 @@ class ZenUpdaterWindow(QMainWindow):
                     border: 1px solid #2a4c3a;
                 }
             """)
-            self.btn_run.setText("Reinstall / Refresh")
+            self.btn_run.setText("Reinstall")
+            self.btn_run.setStyleSheet("""
+            QPushButton {
+                background-color: rgba(56, 139, 253, 0.08);
+                color: #58a6ff;
+                font-weight: bold;
+                font-size: 12px;
+                border: 1px solid #388bfd;
+                border-radius: 5px;
+                padding: 6px 18px;
+            }
+            QPushButton:hover {
+                background-color: rgba(56, 139, 253, 0.18);
+                color: #79c0ff;
+                border-color: #58a6ff;
+            }
+            QPushButton:disabled {
+                background-color: #21262d;
+                color: #6e7681;
+                border-color: #30363d;
+            }
+            """)
             self.btn_run.setEnabled(True)
 
     def run_update(self):
@@ -1335,7 +1327,7 @@ class ZenUpdaterWindow(QMainWindow):
         dismiss_zen_notification()
 
         backup_note = "A safety backup of all your profiles will be created before updating.\n\n" if self.chk_backup.isChecked() else ""
-        if self.btn_run.text() == "Reinstall / Refresh":
+        if self.btn_run.text() == "Reinstall":
             confirm_msg = (
                 f"Zen Browser is already on the latest version.\n\n"
                 f"This will re-install core files, re-link isolated profile binaries, and apply policy safeguards.\n\n"
@@ -1491,8 +1483,14 @@ class ZenUpdaterWindow(QMainWindow):
             self.append_log(f"\nError: Update script exited with status code {exit_code}.\n")
 
     def show_backup_info(self):
-        self.backup_info_expanded = not getattr(self, "backup_info_expanded", False)
-        self.backup_info_frame.setVisible(self.backup_info_expanded)
+        help_text = (
+            "<b>Profile Safety Backup Details:</b><br><br>"
+            "• <b>Location:</b> Stored in <code>~/.zen-backups/</code><br>"
+            "• <b>Auto-Pruned:</b> Automatically retains only the <b>2 most recent</b> snapshots so backups never accumulate.<br>"
+            "• <b>Coverage:</b> Backs up all profiles using multi-threaded <code>zstd</code> compression while excluding transient cache files."
+        )
+        pos = self.btn_backup_help.mapToGlobal(QPoint(self.btn_backup_help.width() // 2, self.btn_backup_help.height() + 4))
+        QToolTip.showText(pos, help_text, self.btn_backup_help)
 
     def launch_zen(self):
         dismiss_zen_notification()
@@ -1511,7 +1509,7 @@ class ZenUpdaterWindow(QMainWindow):
 
         to_launch = []
         for p in self.profiles:
-            if p["is_default"] or (p["name"] in self.selected_profiles):
+            if p["name"] in self.selected_profiles:
                 to_launch.append(p)
 
         if not to_launch:
