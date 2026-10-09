@@ -25,7 +25,7 @@ from PyQt6.QtWidgets import (
     QMessageBox, QGridLayout, QCheckBox, QScrollArea, QComboBox, QToolTip
 )
 
-APP_VERSION = "v1.0.4"
+APP_VERSION = "v1.0.5"
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
@@ -654,7 +654,7 @@ class ZenUpdaterWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle(f"Zen Browser Updater {APP_VERSION}")
         self.setMinimumSize(540, 560)
-        self.resize(580, 640)
+        self.resize(540, 691)
 
         if ICON_PATH and os.path.isfile(ICON_PATH):
             self.setWindowIcon(QIcon(ICON_PATH))
