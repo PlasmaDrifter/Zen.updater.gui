@@ -1076,18 +1076,18 @@ class ZenUpdaterWindow(QMainWindow):
         self.btn_migration_badge.setToolTip("Click to view instructions on migrating existing profiles to this installation")
         self.btn_migration_badge.setStyleSheet("""
             QPushButton {
-                background-color: rgba(56, 139, 253, 0.15);
-                color: #79c0ff;
-                border: 1px solid #388bfd;
+                background-color: rgba(248, 81, 73, 0.15);
+                color: #ff9b9b;
+                border: 1px solid #f85149;
                 border-radius: 11px;
                 font-size: 10px;
                 font-weight: bold;
                 padding: 2px 9px;
             }
             QPushButton:hover {
-                background-color: #388bfd;
+                background-color: #d73a49;
                 color: #ffffff;
-                border-color: #58a6ff;
+                border-color: #ff7b72;
             }
         """)
         self.btn_migration_badge.clicked.connect(self.show_migration_dialog)
