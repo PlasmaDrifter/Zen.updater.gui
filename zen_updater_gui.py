@@ -975,8 +975,37 @@ class ZenUpdaterWindow(QMainWindow):
             QTimer.singleShot(800, lambda: self.start_app_update_check(silent=True))
 
     def setup_ui(self):
-        central = QWidget(self)
-        self.setCentralWidget(central)
+        scroll = QScrollArea(self)
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scroll.setStyleSheet("""
+            QScrollArea {
+                background: transparent;
+                border: none;
+            }
+            QScrollBar:vertical {
+                background-color: #0d1117;
+                width: 8px;
+                border-radius: 4px;
+                margin: 0px;
+            }
+            QScrollBar::handle:vertical {
+                background-color: #30363d;
+                border-radius: 4px;
+                min-height: 25px;
+            }
+            QScrollBar::handle:vertical:hover {
+                background-color: #58a6ff;
+            }
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+                height: 0px;
+            }
+        """)
+
+        central = QWidget()
+        central.setObjectName("centralContainer")
+        central.setStyleSheet("QWidget#centralContainer { background: transparent; }")
         main_layout = QVBoxLayout(central)
         main_layout.setContentsMargins(18, 16, 18, 16)
         main_layout.setSpacing(10)
@@ -1644,6 +1673,9 @@ class ZenUpdaterWindow(QMainWindow):
         """)
         self.log_view.setPlaceholderText("Update details and progress will appear here...")
         main_layout.addWidget(self.log_view)
+
+        scroll.setWidget(central)
+        self.setCentralWidget(scroll)
 
     def toggle_profiles_expanded(self):
         self.profiles_expanded = not self.profiles_expanded
