@@ -228,9 +228,20 @@ if [ ! -f "${DESKTOP_ENTRY}" ]; then
     echo -e "\n${CYAN}Creating desktop entry and application icons...${NC}"
     mkdir -p "${HOME}/.local/share/applications" "${HOME}/.local/share/icons/hicolor/128x128/apps"
     
-    # Copy official icon from tarball to hicolor icons
+    # Copy official icons from tarball across standard hicolor resolutions
+    mkdir -p "${HOME}/.local/share/icons"
+    for sz in 16 32 48 64 128; do
+        src_icon="${INSTALL_DIR}/browser/chrome/icons/default/default${sz}.png"
+        if [ -f "${src_icon}" ]; then
+            dest_dir="${HOME}/.local/share/icons/hicolor/${sz}x${sz}/apps"
+            mkdir -p "${dest_dir}"
+            cp -f "${src_icon}" "${dest_dir}/zen-browser.png" 2>/dev/null || true
+        fi
+    done
     if [ -f "${INSTALL_DIR}/browser/chrome/icons/default/default128.png" ]; then
-        cp -f "${INSTALL_DIR}/browser/chrome/icons/default/default128.png" "${HOME}/.local/share/icons/hicolor/128x128/apps/zen-browser.png" 2>/dev/null || true
+        cp -f "${INSTALL_DIR}/browser/chrome/icons/default/default128.png" "${HOME}/.local/share/icons/zen-browser.png" 2>/dev/null || true
+        mkdir -p "${HOME}/.local/share/icons/hicolor/256x256/apps"
+        cp -f "${INSTALL_DIR}/browser/chrome/icons/default/default128.png" "${HOME}/.local/share/icons/hicolor/256x256/apps/zen-browser.png" 2>/dev/null || true
     fi
 
     cat << EOF > "${DESKTOP_ENTRY}"
