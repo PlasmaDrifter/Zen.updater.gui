@@ -302,6 +302,8 @@ class ZenProfileManager:
                         continue
 
                     full_profile_path = os.path.join(base_dir, path) if is_rel else path
+                    if not os.path.isdir(full_profile_path):
+                        continue
                     if full_profile_path in seen_paths:
                         continue
                     seen_paths.add(full_profile_path)
