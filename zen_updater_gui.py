@@ -25,7 +25,7 @@ from PyQt6.QtWidgets import (
     QMessageBox, QGridLayout, QCheckBox, QScrollArea, QComboBox, QToolTip
 )
 
-APP_VERSION = "v1.0.3"
+APP_VERSION = "v1.0.4"
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
@@ -801,12 +801,13 @@ class ZenUpdaterWindow(QMainWindow):
             }
         """)
         main_layout.addWidget(self.status_banner)
+        self.status_banner.mousePressEvent = self.on_banner_clicked
 
         # 4. Backup Option Checkbox with (?) Info Helper
         backup_layout = QHBoxLayout()
         backup_layout.setSpacing(8)
 
-        self.chk_backup = QCheckBox("Backup all profiles before updating")
+        self.chk_backup = QCheckBox("Backup all profiles before updating or reinstalling")
         self.chk_backup.setChecked(True)
         self.chk_backup.setCursor(Qt.CursorShape.PointingHandCursor)
         self.chk_backup.setStyleSheet(CHECKBOX_QSS)
@@ -840,25 +841,22 @@ class ZenUpdaterWindow(QMainWindow):
         button_layout = QHBoxLayout()
         button_layout.setSpacing(10)
 
-        self.btn_refresh = QPushButton("Refresh")
-        self.btn_refresh.setMinimumHeight(36)
-        self.btn_refresh.clicked.connect(self.start_check)
-
         self.btn_run = QPushButton("Run Update")
         self.btn_run.setMinimumHeight(36)
         self.btn_run.setEnabled(False)
         self.btn_run.setStyleSheet("""
             QPushButton {
-                background-color: #238636;
-                color: #ffffff;
+                background-color: rgba(46, 160, 67, 0.15);
+                color: #a6f3a6;
                 font-weight: bold;
                 font-size: 12px;
-                border: 1px solid #2ea043;
+                border: 1.5px solid #2ea043;
                 border-radius: 5px;
                 padding: 6px 18px;
             }
             QPushButton:hover {
                 background-color: #2ea043;
+                color: #ffffff;
                 border-color: #3fb950;
             }
             QPushButton:disabled {
@@ -873,15 +871,14 @@ class ZenUpdaterWindow(QMainWindow):
         self.btn_launch.setMinimumHeight(36)
         self.btn_launch.clicked.connect(self.launch_zen)
 
-        self.btn_close = QPushButton("Close")
-        self.btn_close.setMinimumHeight(36)
-        self.btn_close.clicked.connect(self.close)
+        self.btn_refresh = QPushButton("Refresh")
+        self.btn_refresh.setMinimumHeight(36)
+        self.btn_refresh.clicked.connect(self.start_check)
 
-        button_layout.addWidget(self.btn_refresh)
         button_layout.addWidget(self.btn_run)
         button_layout.addWidget(self.btn_launch)
         button_layout.addStretch()
-        button_layout.addWidget(self.btn_close)
+        button_layout.addWidget(self.btn_refresh)
         main_layout.addLayout(button_layout)
 
         # 6. Expandable Launch Profiles Section
@@ -1193,12 +1190,18 @@ class ZenUpdaterWindow(QMainWindow):
         else:
             self.append_log(f"Error triggering background check: {msg}\n")
 
+    def on_banner_clicked(self, event):
+        if getattr(self, "update_available", False) and self.btn_run.isEnabled():
+            self.run_update()
+
     def start_check(self):
         if self.check_worker and self.check_worker.isRunning():
             return
 
         self.btn_refresh.setEnabled(False)
         self.btn_run.setEnabled(False)
+        self.status_banner.setCursor(Qt.CursorShape.ArrowCursor)
+        self.status_banner.setToolTip("")
         self.status_banner.setText("Checking for updates...")
         self.status_banner.setStyleSheet("""
             QLabel {
@@ -1245,31 +1248,40 @@ class ZenUpdaterWindow(QMainWindow):
         self.update_available = result["update_available"]
 
         if result["update_available"]:
-            self.status_banner.setText(f"Update Available: Version {result['latest_version']} (Released {result['latest_date']})")
+            self.status_banner.setCursor(Qt.CursorShape.PointingHandCursor)
+            self.status_banner.setToolTip("Click to install this update")
+            self.lbl_lat_ver.setStyleSheet("font-size: 15px; font-weight: bold; color: #a6f3a6; border: none; background: transparent;")
+            self.status_banner.setText(f"★  Update Available: Version {result['latest_version']} (Released {result['latest_date']})  —  Click to Install")
             self.status_banner.setStyleSheet("""
                 QLabel {
                     padding: 10px;
                     border-radius: 6px;
-                    background-color: #1d3b2b;
-                    color: #56d364;
+                    background-color: #163b26;
+                    color: #a6f3a6;
                     font-weight: bold;
                     font-size: 13px;
-                    border: 1px solid #2e5e44;
+                    border: 1.5px solid #2ea043;
+                }
+                QLabel:hover {
+                    background-color: #1d4d32;
+                    border-color: #3fb950;
+                    color: #ffffff;
                 }
             """)
             self.btn_run.setText("Run Update")
             self.btn_run.setStyleSheet("""
             QPushButton {
-                background-color: #238636;
-                color: #ffffff;
+                background-color: rgba(46, 160, 67, 0.15);
+                color: #a6f3a6;
                 font-weight: bold;
                 font-size: 12px;
-                border: 1px solid #2ea043;
+                border: 1.5px solid #2ea043;
                 border-radius: 5px;
                 padding: 6px 18px;
             }
             QPushButton:hover {
                 background-color: #2ea043;
+                color: #ffffff;
                 border-color: #3fb950;
             }
             QPushButton:disabled {
@@ -1283,33 +1295,36 @@ class ZenUpdaterWindow(QMainWindow):
             relinked = self.profile_mgr.sync_profile_binaries()
             if relinked:
                 self.append_log(f"Auto-synced profile executables: {', '.join(relinked)}\n")
-            self.status_banner.setText(f"Zen Browser is up to date ({result['current_version']})")
+            self.status_banner.setCursor(Qt.CursorShape.ArrowCursor)
+            self.status_banner.setToolTip("")
+            self.lbl_lat_ver.setStyleSheet("font-size: 15px; font-weight: bold; color: #58a6ff; border: none; background: transparent;")
+            self.status_banner.setText(f"✓  Zen Browser is up to date ({result['current_version']})")
             self.status_banner.setStyleSheet("""
                 QLabel {
                     padding: 10px;
                     border-radius: 6px;
-                    background-color: #1e3328;
-                    color: #7ee787;
+                    background-color: #13233a;
+                    color: #79c0ff;
                     font-weight: bold;
                     font-size: 13px;
-                    border: 1px solid #2a4c3a;
+                    border: 1px solid #214068;
                 }
             """)
             self.btn_run.setText("Reinstall")
             self.btn_run.setStyleSheet("""
             QPushButton {
-                background-color: rgba(56, 139, 253, 0.08);
-                color: #58a6ff;
+                background-color: rgba(248, 81, 73, 0.12);
+                color: #ff7b72;
                 font-weight: bold;
                 font-size: 12px;
-                border: 1px solid #388bfd;
+                border: 1px solid #f85149;
                 border-radius: 5px;
                 padding: 6px 18px;
             }
             QPushButton:hover {
-                background-color: rgba(56, 139, 253, 0.18);
-                color: #79c0ff;
-                border-color: #58a6ff;
+                background-color: rgba(248, 81, 73, 0.22);
+                color: #ffa198;
+                border-color: #ff7b72;
             }
             QPushButton:disabled {
                 background-color: #21262d;
