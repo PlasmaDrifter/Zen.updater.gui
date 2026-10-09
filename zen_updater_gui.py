@@ -1831,7 +1831,7 @@ class ZenUpdaterWindow(QMainWindow):
                 to_launch.append(p)
 
         if not to_launch:
-            QProcess.startDetached(zen_bin, [])
+            QProcess.startDetached(zen_bin, ["--allow-downgrade"])
             return
 
         self.append_log(f"\nLaunching {len(to_launch)} profile(s)...\n")
@@ -1845,13 +1845,13 @@ class ZenUpdaterWindow(QMainWindow):
             elif p.get("full_path") and not p.get("ini_file", "").endswith(".zen/profiles.ini"):
                 # Profile is stored in an alternate location (e.g. ~/.config/zen or Flatpak)
                 prog = zen_bin
-                args = ["--no-remote", "--profile", p["full_path"]]
+                args = ["--allow-downgrade", "--no-remote", "--profile", p["full_path"]]
             elif p["is_default"]:
                 prog = zen_bin
-                args = []
+                args = ["--allow-downgrade"]
             else:
                 prog = zen_bin
-                args = ["--no-remote", "-P", p["name"]]
+                args = ["--allow-downgrade", "--no-remote", "-P", p["name"]]
 
             delay = idx * 250
             if delay == 0:
