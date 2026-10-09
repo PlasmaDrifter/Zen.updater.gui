@@ -1662,8 +1662,7 @@ class ZenUpdaterWindow(QMainWindow):
     def update_profiles_toggle_text(self):
         count = len(self.selected_profiles)
         arrow = "▼" if self.profiles_expanded else "▶"
-        hint = "Hide profile options" if self.profiles_expanded else "Configure launch profiles"
-        self.btn_toggle_profiles.setText(f"{arrow} Launch Profiles ({count} selected) — {hint}")
+        self.btn_toggle_profiles.setText(f"{arrow} Launch Profiles ({count} selected)")
 
     def on_profile_toggled(self, name, checked):
         if checked:
@@ -1691,8 +1690,7 @@ class ZenUpdaterWindow(QMainWindow):
         arrow = "▼" if self.timer_expanded else "▶"
         status_text = "Active" if self.timer_status["active"] else "Disabled"
         interval_text = self.timer_status.get("interval", "6h")
-        hint = "Hide settings" if self.timer_expanded else "Configure auto-check timer"
-        self.btn_toggle_timer.setText(f"{arrow} Background Auto-Check ({status_text} — Every {interval_text}) — {hint}")
+        self.btn_toggle_timer.setText(f"{arrow} Background Auto-Check ({status_text} — Every {interval_text})")
 
     def refresh_timer_status_label(self):
         self.timer_status = self.timer_mgr.get_status()
@@ -1763,9 +1761,8 @@ class ZenUpdaterWindow(QMainWindow):
     def update_app_update_toggle_text(self):
         arrow = "▼" if self.app_update_expanded else "▶"
         has_upd = getattr(self, "app_update_info", {}).get("has_update", False)
-        upd_str = "Update Available" if has_upd else "Check & update application"
-        hint = "Hide settings" if self.app_update_expanded else upd_str
-        self.btn_toggle_app_update.setText(f"{arrow} Zen Updater Updates ({APP_VERSION}) — {hint}")
+        upd_str = " (Update Available)" if has_upd else ""
+        self.btn_toggle_app_update.setText(f"{arrow} Zen Updater Updates ({APP_VERSION}){upd_str}")
 
     def on_app_update_badge_clicked(self):
         if not self.app_update_expanded:
