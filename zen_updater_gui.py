@@ -1648,6 +1648,15 @@ class ZenUpdaterWindow(QMainWindow):
     def toggle_profiles_expanded(self):
         self.profiles_expanded = not self.profiles_expanded
         self.profile_frame.setVisible(self.profiles_expanded)
+        if self.profiles_expanded:
+            if self.timer_expanded:
+                self.timer_expanded = False
+                self.timer_frame.setVisible(False)
+                self.update_timer_toggle_text()
+            if getattr(self, "app_update_expanded", False):
+                self.app_update_expanded = False
+                self.app_update_frame.setVisible(False)
+                self.update_app_update_toggle_text()
         self.update_profiles_toggle_text()
 
     def update_profiles_toggle_text(self):
@@ -1667,6 +1676,15 @@ class ZenUpdaterWindow(QMainWindow):
     def toggle_timer_expanded(self):
         self.timer_expanded = not self.timer_expanded
         self.timer_frame.setVisible(self.timer_expanded)
+        if self.timer_expanded:
+            if self.profiles_expanded:
+                self.profiles_expanded = False
+                self.profile_frame.setVisible(False)
+                self.update_profiles_toggle_text()
+            if getattr(self, "app_update_expanded", False):
+                self.app_update_expanded = False
+                self.app_update_frame.setVisible(False)
+                self.update_app_update_toggle_text()
         self.update_timer_toggle_text()
 
     def update_timer_toggle_text(self):
@@ -1731,6 +1749,15 @@ class ZenUpdaterWindow(QMainWindow):
     def toggle_app_update_expanded(self):
         self.app_update_expanded = not self.app_update_expanded
         self.app_update_frame.setVisible(self.app_update_expanded)
+        if self.app_update_expanded:
+            if self.profiles_expanded:
+                self.profiles_expanded = False
+                self.profile_frame.setVisible(False)
+                self.update_profiles_toggle_text()
+            if self.timer_expanded:
+                self.timer_expanded = False
+                self.timer_frame.setVisible(False)
+                self.update_timer_toggle_text()
         self.update_app_update_toggle_text()
 
     def update_app_update_toggle_text(self):
