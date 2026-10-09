@@ -261,63 +261,95 @@ class ZenProfileManager:
 
     def get_profiles(self):
         profiles = []
-        if not os.path.isfile(self.ini_path):
-            return profiles
+        # Candidates for profiles.ini across repo builds, tarball, and flatpak
+        candidates = [
+            os.path.expanduser("~/.config/zen/profiles.ini"),
+            os.path.expanduser("~/.zen/profiles.ini"),
+            os.path.expanduser("~/.var/app/app.zen_browser.zen/.zen/profiles.ini"),
+            os.path.expanduser("~/.var/app/app.zen_browser.zen/.config/zen/profiles.ini"),
+        ]
 
-        cp = configparser.ConfigParser()
-        try:
-            cp.read(self.ini_path)
-        except Exception:
-            return profiles
-
-        default_path = None
-        for sec in cp.sections():
-            if sec.startswith("Install") and cp.has_option(sec, "Default"):
-                default_path = cp.get(sec, "Default")
-                break
-
+        seen_paths = set()
         desktop_map = self._scan_desktop_files()
 
-        for sec in cp.sections():
-            if sec.startswith("Profile"):
-                name = cp.get(sec, "Name", fallback="")
-                path = cp.get(sec, "Path", fallback="")
-                if default_path:
-                    is_def = (path == default_path)
-                else:
-                    is_def = (cp.get(sec, "Default", fallback="0") == "1")
+        for ini_file in candidates:
+            if not os.path.isfile(ini_file):
+                continue
 
-                desktop_info = desktop_map.get(name)
-                if name == "zen-YT":
-                    display_name = "YouTube (zen-YT)"
-                elif name == "Qbittorrent":
-                    display_name = "qBittorrent WebUI (Qbittorrent)"
-                elif name == "Default (twilight)":
-                    display_name = "Twilight Profile"
-                elif name == "Default Profile":
-                    display_name = "Default Profile (Secondary)"
-                elif desktop_info and desktop_info.get("name"):
-                    dname = desktop_info["name"]
-                    if dname.lower().startswith("zen browser (") and dname.endswith(")"):
-                        dname = dname[len("zen browser ("):-1]
-                    elif dname.lower().startswith("zen browser"):
-                        dname = dname[len("zen browser"):].strip(" -:")
-                    display_name = f"{dname} ({name})" if dname and dname != name else (dname or name)
-                else:
-                    display_name = name
+            cp = configparser.ConfigParser()
+            try:
+                cp.read(ini_file)
+            except Exception:
+                continue
 
-                if is_def:
-                    if not display_name.lower().endswith("default"):
-                        display_name = f"{display_name} - Default"
+            base_dir = os.path.dirname(ini_file)
+            is_flatpak = ".var/app" in ini_file
+            is_xdg = ".config/zen" in ini_file
 
-                profiles.append({
-                    "name": name,
-                    "path": path,
-                    "is_default": is_def,
-                    "display_name": display_name,
-                    "desktop_file": desktop_info["file"] if desktop_info else None,
-                    "exec_cmd": desktop_info["exec"] if desktop_info else None
-                })
+            default_path = None
+            for sec in cp.sections():
+                if sec.startswith("Install") and cp.has_option(sec, "Default"):
+                    default_path = cp.get(sec, "Default")
+                    break
+
+            for sec in cp.sections():
+                if sec.startswith("Profile"):
+                    name = cp.get(sec, "Name", fallback="")
+                    path = cp.get(sec, "Path", fallback="")
+                    is_rel = cp.get(sec, "IsRelative", fallback="1") == "1"
+
+                    if not name or not path:
+                        continue
+
+                    full_profile_path = os.path.join(base_dir, path) if is_rel else path
+                    if full_profile_path in seen_paths:
+                        continue
+                    seen_paths.add(full_profile_path)
+
+                    if default_path:
+                        is_def = (path == default_path)
+                    else:
+                        is_def = (cp.get(sec, "Default", fallback="0") == "1")
+
+                    desktop_info = desktop_map.get(name)
+                    if name == "zen-YT":
+                        display_name = "YouTube (zen-YT)"
+                    elif name == "Qbittorrent":
+                        display_name = "qBittorrent WebUI (Qbittorrent)"
+                    elif name == "Default (twilight)":
+                        display_name = "Twilight Profile"
+                    elif name == "Default Profile":
+                        display_name = "Default Profile (Secondary)"
+                    elif desktop_info and desktop_info.get("name"):
+                        dname = desktop_info["name"]
+                        if dname.lower().startswith("zen browser (") and dname.endswith(")"):
+                            dname = dname[len("zen browser ("):-1]
+                        elif dname.lower().startswith("zen browser"):
+                            dname = dname[len("zen browser"):].strip(" -:")
+                        display_name = f"{dname} ({name})" if dname and dname != name else (dname or name)
+                    else:
+                        display_name = name
+
+                    if is_flatpak:
+                        display_name = f"{display_name} [Flatpak]"
+                    elif is_xdg and not os.path.isfile(os.path.expanduser("~/.zen/profiles.ini")):
+                        # Standard repo location
+                        pass
+
+                    if is_def:
+                        if not display_name.lower().endswith("default") and not "[flatpak]" in display_name.lower():
+                            display_name = f"{display_name} - Default"
+
+                    profiles.append({
+                        "name": name,
+                        "path": path,
+                        "full_path": full_profile_path,
+                        "ini_file": ini_file,
+                        "is_default": is_def,
+                        "display_name": display_name,
+                        "desktop_file": desktop_info["file"] if desktop_info else None,
+                        "exec_cmd": desktop_info["exec"] if desktop_info else None
+                    })
 
         # Ensure default profile is first in list, followed by desktop-configured profiles, then alphabetical
         profiles.sort(key=lambda p: (not p["is_default"], not bool(p["desktop_file"]), p["display_name"]))
@@ -1803,14 +1835,18 @@ class ZenUpdaterWindow(QMainWindow):
         self.append_log(f"\nLaunching {len(to_launch)} profile(s)...\n")
 
         for idx, p in enumerate(to_launch):
-            if p["is_default"]:
-                prog = zen_bin
-                args = []
-            elif p.get("exec_cmd"):
+            if p.get("exec_cmd"):
                 clean = re.sub(r'%[uUfF]', '', p["exec_cmd"]).strip()
                 parts = shlex.split(clean)
                 prog = parts[0]
                 args = parts[1:]
+            elif p.get("full_path") and not p.get("ini_file", "").endswith(".zen/profiles.ini"):
+                # Profile is stored in an alternate location (e.g. ~/.config/zen or Flatpak)
+                prog = zen_bin
+                args = ["--no-remote", "--profile", p["full_path"]]
+            elif p["is_default"]:
+                prog = zen_bin
+                args = []
             else:
                 prog = zen_bin
                 args = ["--no-remote", "-P", p["name"]]
