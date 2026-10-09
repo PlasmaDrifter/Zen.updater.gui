@@ -936,8 +936,8 @@ class ZenUpdaterWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle(f"Zen Browser Updater {APP_VERSION}")
-        self.setMinimumSize(540, 580)
-        self.resize(540, 720)
+        self.setMinimumSize(540, 560)
+        self.resize(540, 691)
 
         if ICON_PATH and os.path.isfile(ICON_PATH):
             self.setWindowIcon(QIcon(ICON_PATH))
@@ -975,37 +975,8 @@ class ZenUpdaterWindow(QMainWindow):
             QTimer.singleShot(800, lambda: self.start_app_update_check(silent=True))
 
     def setup_ui(self):
-        scroll = QScrollArea(self)
-        scroll.setWidgetResizable(True)
-        scroll.setFrameShape(QFrame.Shape.NoFrame)
-        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
-        scroll.setStyleSheet("""
-            QScrollArea {
-                background: transparent;
-                border: none;
-            }
-            QScrollBar:vertical {
-                background-color: #0d1117;
-                width: 8px;
-                border-radius: 4px;
-                margin: 0px;
-            }
-            QScrollBar::handle:vertical {
-                background-color: #30363d;
-                border-radius: 4px;
-                min-height: 25px;
-            }
-            QScrollBar::handle:vertical:hover {
-                background-color: #58a6ff;
-            }
-            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
-                height: 0px;
-            }
-        """)
-
-        central = QWidget()
-        central.setObjectName("centralContainer")
-        central.setStyleSheet("QWidget#centralContainer { background: transparent; }")
+        central = QWidget(self)
+        self.setCentralWidget(central)
         main_layout = QVBoxLayout(central)
         main_layout.setContentsMargins(18, 16, 18, 16)
         main_layout.setSpacing(10)
@@ -1343,7 +1314,7 @@ class ZenUpdaterWindow(QMainWindow):
         profile_layout.addLayout(grid_layout)
 
         self.profiles_expanded = False
-        self.profile_frame.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum)
+        self.profile_frame.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum)
         self.profile_frame.setVisible(False)  # Collapsed by default
         self.update_profiles_toggle_text()
 
@@ -1469,7 +1440,7 @@ class ZenUpdaterWindow(QMainWindow):
         timer_layout.addWidget(self.lbl_timer_status)
 
         self.timer_expanded = False
-        self.timer_frame.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum)
+        self.timer_frame.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum)
         self.timer_frame.setVisible(False)
 
         main_layout.addWidget(self.btn_toggle_timer)
@@ -1628,7 +1599,7 @@ class ZenUpdaterWindow(QMainWindow):
         app_update_layout.addWidget(self.lbl_app_update_status)
 
         self.app_update_expanded = False
-        self.app_update_frame.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Minimum)
+        self.app_update_frame.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum)
         self.app_update_frame.setVisible(False)
 
         main_layout.addWidget(self.btn_toggle_app_update)
@@ -1660,8 +1631,7 @@ class ZenUpdaterWindow(QMainWindow):
         # 8. Console / Progress Output
         self.log_view = QTextEdit()
         self.log_view.setReadOnly(True)
-        self.log_view.setMinimumHeight(70)
-        self.log_view.setMaximumHeight(120)
+        self.log_view.setMinimumHeight(80)
         self.log_view.setStyleSheet("""
             QTextEdit {
                 background-color: #15181c;
@@ -1674,9 +1644,6 @@ class ZenUpdaterWindow(QMainWindow):
         """)
         self.log_view.setPlaceholderText("Update details and progress will appear here...")
         main_layout.addWidget(self.log_view)
-
-        scroll.setWidget(central)
-        self.setCentralWidget(scroll)
 
     def toggle_profiles_expanded(self):
         self.profiles_expanded = not self.profiles_expanded
