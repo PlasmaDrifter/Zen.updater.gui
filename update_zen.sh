@@ -9,7 +9,6 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 INSTALL_DIR="${HOME}/.tarball-installations/zen"
-APP_INI="${INSTALL_DIR}/application.ini"
 TEMP_DIR=""
 
 GREEN='\033[0;32m'
@@ -34,13 +33,35 @@ echo -e "${CYAN}===============================================${NC}"
 FORCE_UPDATE_FLAG=false
 BACKUP_FLAG=true
 
-for arg in "$@"; do
-    case "${arg}" in
-        -f|--force|-y|--yes) FORCE_UPDATE_FLAG=true ;;
-        --no-backup) BACKUP_FLAG=false ;;
-        --backup) BACKUP_FLAG=true ;;
+while [ $# -gt 0 ]; do
+    case "$1" in
+        -f|--force|-y|--yes)
+            FORCE_UPDATE_FLAG=true
+            shift
+            ;;
+        --no-backup)
+            BACKUP_FLAG=false
+            shift
+            ;;
+        --backup)
+            BACKUP_FLAG=true
+            shift
+            ;;
+        -d|--install-dir)
+            if [ -n "${2:-}" ]; then
+                INSTALL_DIR="$2"
+                shift 2
+            else
+                shift
+            fi
+            ;;
+        *)
+            shift
+            ;;
     esac
 done
+
+APP_INI="${INSTALL_DIR}/application.ini"
 
 # 1. Determine Current and Latest Versions
 CURRENT_VER="Unknown"

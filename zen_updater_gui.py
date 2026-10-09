@@ -25,7 +25,7 @@ from PyQt6.QtWidgets import (
     QMessageBox, QGridLayout, QCheckBox, QScrollArea, QComboBox, QToolTip
 )
 
-APP_VERSION = "v1.0.5"
+APP_VERSION = "v1.0.6"
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
@@ -58,22 +58,104 @@ def find_update_script():
     return os.path.join(SCRIPT_DIR, "update_zen.sh")
 
 
-def find_app_ini():
-    candidates = [
-        os.path.expanduser("~/.tarball-installations/zen/application.ini"),
-        "/opt/zen/application.ini",
-        os.path.expanduser("~/.local/opt/zen/application.ini"),
-        "/usr/lib/zen/application.ini",
+DEFAULT_TARBALL_DIR = os.path.expanduser("~/.tarball-installations/zen")
+
+
+def detect_zen_installation():
+    """
+    Detects how Zen Browser is installed on the system:
+    Returns dict:
+      - 'type': 'tarball' | 'flatpak' | 'system' | 'none'
+      - 'path': directory or identifier
+      - 'ini': path to application.ini if found
+      - 'description': human-readable summary
+    """
+    # 1. Check known/common user-level tarball locations
+    tarball_candidates = [
+        DEFAULT_TARBALL_DIR,
+        os.path.expanduser("~/.local/share/zen"),
+        os.path.expanduser("~/Applications/zen"),
+        os.path.expanduser("~/.local/opt/zen"),
+        os.path.expanduser("~/.zen-browser"),
+        os.path.expanduser("~/zen"),
     ]
-    for c in candidates:
-        if os.path.isfile(c):
-            return c
-    return os.path.expanduser("~/.tarball-installations/zen/application.ini")
+    for cand in tarball_candidates:
+        ini_file = os.path.join(cand, "application.ini")
+        if os.path.isfile(ini_file):
+            return {
+                "type": "tarball",
+                "path": cand,
+                "ini": ini_file,
+                "description": f"Portable tarball ({cand})"
+            }
+
+    # 2. Check Flatpak
+    try:
+        res = subprocess.run(["flatpak", "info", "app.zen_browser.zen"], capture_output=True, text=True)
+        if res.returncode == 0:
+            # Check if version can be extracted
+            flatpak_ver = "Unknown"
+            for line in res.stdout.splitlines():
+                if line.strip().startswith("Version:"):
+                    flatpak_ver = line.split(":", 1)[1].strip()
+                    break
+            return {
+                "type": "flatpak",
+                "path": "app.zen_browser.zen",
+                "ini": "",
+                "flatpak_ver": flatpak_ver,
+                "description": "Flatpak (app.zen_browser.zen)"
+            }
+    except Exception:
+        pass
+
+    # 3. Check System / Distro Packages
+    system_candidates = [
+        "/opt/zen",
+        "/usr/lib/zen",
+        "/usr/lib64/zen",
+        "/usr/local/lib/zen",
+    ]
+    for cand in system_candidates:
+        ini_file = os.path.join(cand, "application.ini")
+        if os.path.isfile(ini_file):
+            return {
+                "type": "system",
+                "path": cand,
+                "ini": ini_file,
+                "description": f"System package ({cand})"
+            }
+
+    # 4. Check PATH binary if symlinked
+    which_zen = shutil.which("zen") or shutil.which("zen-browser")
+    if which_zen:
+        try:
+            real_bin = os.path.realpath(which_zen)
+            bin_dir = os.path.dirname(real_bin)
+            ini_file = os.path.join(bin_dir, "application.ini")
+            if os.path.isfile(ini_file):
+                is_user = bin_dir.startswith(os.path.expanduser("~"))
+                return {
+                    "type": "tarball" if is_user else "system",
+                    "path": bin_dir,
+                    "ini": ini_file,
+                    "description": f"User binary ({bin_dir})" if is_user else f"System package ({bin_dir})"
+                }
+        except Exception:
+            pass
+
+    return {
+        "type": "none",
+        "path": "",
+        "ini": "",
+        "description": "Not installed"
+    }
 
 
 ICON_PATH = find_zen_icon()
 UPDATE_SCRIPT = find_update_script()
-APP_INI = find_app_ini()
+INSTALL_INFO = detect_zen_installation()
+APP_INI = INSTALL_INFO.get("ini") or os.path.join(DEFAULT_TARBALL_DIR, "application.ini")
 
 CHECKMARK_ICON_PATH = os.path.join(SCRIPT_DIR, "assets", "checkmark.png")
 
@@ -172,8 +254,9 @@ class ZenProfileManager:
         self.config_dir = os.path.expanduser("~/.config/zen-updater")
         self.settings_file = os.path.join(self.config_dir, "settings.json")
         self.zen_dir = os.path.expanduser("~/.zen")
-        self.ini_path = os.path.join(self.zen_dir, "profiles.ini")
-        self.install_dir = os.path.dirname(APP_INI) if os.path.isfile(APP_INI) else os.path.expanduser("~/.tarball-installations/zen")
+        self.install_dir = INSTALL_INFO["path"] if (INSTALL_INFO["type"] == "tarball" and os.path.isdir(INSTALL_INFO["path"])) else (
+            os.path.dirname(APP_INI) if os.path.isfile(APP_INI) else DEFAULT_TARBALL_DIR
+        )
 
     def get_profiles(self):
         profiles = []
@@ -550,20 +633,24 @@ class CheckVersionWorker(QThread):
     finished = pyqtSignal(dict)
 
     def run(self):
+        install_info = detect_zen_installation()
         result = {
             "current_version": "Unknown",
             "current_date": "Unknown",
             "latest_version": "Unknown",
             "latest_date": "Unknown",
             "update_available": False,
+            "install_info": install_info,
             "error": None
         }
 
-        # 1. Read Current Version and BuildID from application.ini
+        # 1. Read Current Version and BuildID
         build_id = None
-        if os.path.isfile(APP_INI):
+        if install_info["type"] == "flatpak":
+            result["current_version"] = install_info.get("flatpak_ver", "Flatpak")
+        elif install_info["ini"] and os.path.isfile(install_info["ini"]):
             try:
-                with open(APP_INI, "r", encoding="utf-8") as f:
+                with open(install_info["ini"], "r", encoding="utf-8") as f:
                     for line in f:
                         line = line.strip()
                         if line.startswith("Version="):
@@ -1246,8 +1333,159 @@ class ZenUpdaterWindow(QMainWindow):
             return
 
         self.update_available = result["update_available"]
+        self.install_info = result.get("install_info") or INSTALL_INFO
 
-        if result["update_available"]:
+        if self.install_info["type"] == "none":
+            self.status_banner.setCursor(Qt.CursorShape.PointingHandCursor)
+            self.status_banner.setToolTip("Click to download and install Zen Browser")
+            self.lbl_lat_ver.setStyleSheet("font-size: 15px; font-weight: bold; color: #a6f3a6; border: none; background: transparent;")
+            self.status_banner.setText(f"★  Zen Browser Not Installed  —  Click to Install {result['latest_version']}")
+            self.status_banner.setStyleSheet("""
+                QLabel {
+                    padding: 10px;
+                    border-radius: 6px;
+                    background-color: #163b26;
+                    color: #a6f3a6;
+                    font-weight: bold;
+                    font-size: 13px;
+                    border: 1.5px solid #2ea043;
+                }
+                QLabel:hover {
+                    background-color: #1d4d32;
+                    border-color: #3fb950;
+                    color: #ffffff;
+                }
+            """)
+            self.btn_run.setText("Install Zen Browser")
+            self.btn_run.setStyleSheet("""
+            QPushButton {
+                background-color: rgba(46, 160, 67, 0.15);
+                color: #a6f3a6;
+                font-weight: bold;
+                font-size: 12px;
+                border: 1.5px solid #2ea043;
+                border-radius: 5px;
+                padding: 6px 18px;
+            }
+            QPushButton:hover {
+                background-color: #2ea043;
+                color: #ffffff;
+                border-color: #3fb950;
+            }
+            QPushButton:disabled {
+                background-color: #21262d;
+                color: #6e7681;
+                border-color: #30363d;
+            }
+            """)
+            self.btn_run.setEnabled(True)
+        elif self.install_info["type"] == "flatpak":
+            self.status_banner.setCursor(Qt.CursorShape.PointingHandCursor)
+            self.status_banner.setToolTip("Flatpak installation detected")
+            self.lbl_lat_ver.setStyleSheet("font-size: 15px; font-weight: bold; color: #79c0ff; border: none; background: transparent;")
+            self.status_banner.setText(f"ℹ  Flatpak Installation Detected ({result['current_version']})  —  Updates managed via Flathub")
+            self.status_banner.setStyleSheet("""
+                QLabel {
+                    padding: 10px;
+                    border-radius: 6px;
+                    background-color: #13233a;
+                    color: #79c0ff;
+                    font-weight: bold;
+                    font-size: 13px;
+                    border: 1px solid #214068;
+                }
+                QLabel:hover {
+                    background-color: #1a3354;
+                    border-color: #388bfd;
+                }
+            """)
+            self.btn_run.setText("Install Portable")
+            self.btn_run.setStyleSheet("""
+            QPushButton {
+                background-color: rgba(56, 139, 253, 0.15);
+                color: #79c0ff;
+                font-weight: bold;
+                font-size: 12px;
+                border: 1px solid #388bfd;
+                border-radius: 5px;
+                padding: 6px 18px;
+            }
+            QPushButton:hover {
+                background-color: #388bfd;
+                color: #ffffff;
+                border-color: #58a6ff;
+            }
+            """)
+            self.btn_run.setEnabled(True)
+        elif self.install_info["type"] == "system":
+            if result["update_available"]:
+                self.status_banner.setCursor(Qt.CursorShape.PointingHandCursor)
+                self.status_banner.setToolTip("System package detected")
+                self.lbl_lat_ver.setStyleSheet("font-size: 15px; font-weight: bold; color: #d29922; border: none; background: transparent;")
+                self.status_banner.setText(f"⚠  System Package Detected ({result['current_version']})  —  New {result['latest_version']} Available")
+                self.status_banner.setStyleSheet("""
+                    QLabel {
+                        padding: 10px;
+                        border-radius: 6px;
+                        background-color: #3b2300;
+                        color: #f2cc60;
+                        font-weight: bold;
+                        font-size: 13px;
+                        border: 1px solid #bb8009;
+                    }
+                """)
+                self.btn_run.setText("Install Portable")
+                self.btn_run.setStyleSheet("""
+                QPushButton {
+                    background-color: rgba(210, 153, 34, 0.15);
+                    color: #f2cc60;
+                    font-weight: bold;
+                    font-size: 12px;
+                    border: 1px solid #bb8009;
+                    border-radius: 5px;
+                    padding: 6px 18px;
+                }
+                QPushButton:hover {
+                    background-color: #bb8009;
+                    color: #ffffff;
+                }
+                """)
+                self.btn_run.setEnabled(True)
+            else:
+                self.status_banner.setCursor(Qt.CursorShape.ArrowCursor)
+                self.status_banner.setToolTip("")
+                self.lbl_lat_ver.setStyleSheet("font-size: 15px; font-weight: bold; color: #58a6ff; border: none; background: transparent;")
+                self.status_banner.setText(f"✓  System Package is up to date ({result['current_version']})")
+                self.status_banner.setStyleSheet("""
+                    QLabel {
+                        padding: 10px;
+                        border-radius: 6px;
+                        background-color: #13233a;
+                        color: #79c0ff;
+                        font-weight: bold;
+                        font-size: 13px;
+                        border: 1px solid #214068;
+                    }
+                """)
+                self.btn_run.setText("Reinstall Portable")
+                self.btn_run.setStyleSheet("""
+                QPushButton {
+                    background-color: rgba(248, 81, 73, 0.12);
+                    color: #ff7b72;
+                    font-weight: bold;
+                    font-size: 12px;
+                    border: 1px solid #f85149;
+                    border-radius: 5px;
+                    padding: 6px 18px;
+                }
+                QPushButton:hover {
+                    background-color: rgba(248, 81, 73, 0.22);
+                    color: #ffa198;
+                    border-color: #ff7b72;
+                }
+                """)
+                self.btn_run.setEnabled(True)
+        elif result["update_available"]:
             self.status_banner.setCursor(Qt.CursorShape.PointingHandCursor)
             self.status_banner.setToolTip("Click to install this update")
             self.lbl_lat_ver.setStyleSheet("font-size: 15px; font-weight: bold; color: #a6f3a6; border: none; background: transparent;")
@@ -1341,23 +1579,52 @@ class ZenUpdaterWindow(QMainWindow):
 
         dismiss_zen_notification()
 
+        install_type = getattr(self, "install_info", {}).get("type", "tarball")
+        target_dir = getattr(self, "install_info", {}).get("path", "")
+        if not target_dir or install_type != "tarball":
+            target_dir = DEFAULT_TARBALL_DIR
+
         backup_note = "A safety backup of all your profiles will be created before updating.\n\n" if self.chk_backup.isChecked() else ""
-        if self.btn_run.text() == "Reinstall":
+
+        if install_type == "none":
+            confirm_msg = (
+                f"Zen Browser was not detected on your system.\n\n"
+                f"This will download and install the official portable release to:\n{target_dir}\n\n"
+                "Do you want to proceed with the installation?"
+            )
+        elif install_type == "flatpak":
+            confirm_msg = (
+                f"Zen Browser appears to be installed via Flatpak.\n\n"
+                f"Flatpak versions are managed and updated through Flathub or your Software Center.\n\n"
+                f"Proceeding here will install a separate portable copy of Zen Browser to:\n{target_dir}\n\n"
+                f"{backup_note}"
+                "Do you want to proceed with installing a separate portable version?"
+            )
+        elif install_type == "system":
+            confirm_msg = (
+                f"Zen Browser appears to be installed via your system package manager.\n\n"
+                f"It is recommended to update system packages through your distribution package manager.\n\n"
+                f"Proceeding here will install a separate portable copy of Zen Browser in your user directory:\n{target_dir}\n\n"
+                f"{backup_note}"
+                "Do you want to proceed with installing a separate portable version?"
+            )
+        elif self.btn_run.text() == "Reinstall":
             confirm_msg = (
                 f"Zen Browser is already on the latest version.\n\n"
-                f"This will re-install core files, re-link isolated profile binaries, and apply policy safeguards.\n\n"
+                f"This will re-install core files into {target_dir}, re-link isolated profile binaries, and apply policy safeguards.\n\n"
                 f"{backup_note}"
                 "Do you want to proceed?"
             )
         else:
             confirm_msg = (
-                f"This will close any running Zen Browser windows and install the update.\n\n"
+                f"This will close any running Zen Browser windows and install the update into:\n{target_dir}\n\n"
                 f"{backup_note}"
                 "Do you want to proceed?"
             )
+
         reply = QMessageBox.question(
             self,
-            "Confirm Update",
+            "Confirm Installation / Update",
             confirm_msg,
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.Yes
@@ -1369,7 +1636,8 @@ class ZenUpdaterWindow(QMainWindow):
         self.btn_run.setEnabled(False)
         self.btn_launch.setEnabled(False)
 
-        self.status_banner.setText("Updating Zen Browser... Please wait.")
+        action_label = "Installing" if install_type == "none" else "Updating"
+        self.status_banner.setText(f"{action_label} Zen Browser... Please wait.")
         self.status_banner.setStyleSheet("""
             QLabel {
                 padding: 10px;
@@ -1384,16 +1652,16 @@ class ZenUpdaterWindow(QMainWindow):
 
         self.progress_bar.setVisible(True)
         self.progress_bar.setValue(5)
-        self.progress_bar.setFormat("Initializing update...")
+        self.progress_bar.setFormat(f"Initializing {action_label.lower()}...")
         self.log_view.clear()
-        self.append_log("Starting update process...\n")
+        self.append_log(f"Starting {action_label.lower()} process for {target_dir}...\n")
 
         self.process = QProcess(self)
         self.process.readyReadStandardOutput.connect(self.on_stdout)
         self.process.readyReadStandardError.connect(self.on_stderr)
         self.process.finished.connect(self.on_process_finished)
 
-        args = [UPDATE_SCRIPT, "--force"]
+        args = [UPDATE_SCRIPT, "--force", "--install-dir", target_dir]
         if self.chk_backup.isChecked():
             args.append("--backup")
         else:

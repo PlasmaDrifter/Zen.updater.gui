@@ -2,8 +2,24 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-APP_INI="${HOME}/.tarball-installations/zen/application.ini"
-[ -f "${APP_INI}" ] || exit 0
+CANDIDATES=(
+    "${HOME}/.tarball-installations/zen/application.ini"
+    "${HOME}/.local/share/zen/application.ini"
+    "${HOME}/Applications/zen/application.ini"
+    "${HOME}/.local/opt/zen/application.ini"
+    "${HOME}/.zen-browser/application.ini"
+    "/opt/zen/application.ini"
+)
+
+APP_INI=""
+for cand in "${CANDIDATES[@]}"; do
+    if [ -f "${cand}" ]; then
+        APP_INI="${cand}"
+        break
+    fi
+done
+
+[ -n "${APP_INI}" ] || exit 0
 
 CURRENT_VER=$(grep "^Version=" "${APP_INI}" | cut -d'=' -f2 | tr -d '[:space:]')
 
