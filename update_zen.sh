@@ -222,6 +222,52 @@ cat << 'EOF' > "${INSTALL_DIR}/distribution/policies.json"
 }
 EOF
 
+# 7. Ensure Zen Browser Desktop Entry and Application Icons exist
+DESKTOP_ENTRY="${HOME}/.local/share/applications/zen-browser.desktop"
+if [ ! -f "${DESKTOP_ENTRY}" ]; then
+    echo -e "\n${CYAN}Creating desktop entry and application icons...${NC}"
+    mkdir -p "${HOME}/.local/share/applications" "${HOME}/.local/share/icons/hicolor/128x128/apps"
+    
+    # Copy official icon from tarball to hicolor icons
+    if [ -f "${INSTALL_DIR}/browser/chrome/icons/default/default128.png" ]; then
+        cp -f "${INSTALL_DIR}/browser/chrome/icons/default/default128.png" "${HOME}/.local/share/icons/hicolor/128x128/apps/zen-browser.png" 2>/dev/null || true
+    fi
+
+    cat << EOF > "${DESKTOP_ENTRY}"
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Zen Browser
+GenericName=Web Browser
+Comment=Experience tranquillity while browsing the web without people tracking you!
+Keywords=Internet;WWW;Browser;Web;Explorer;zen;
+Exec=${INSTALL_DIR}/zen %u
+Icon=zen-browser
+Terminal=false
+StartupNotify=true
+StartupWMClass=zen
+Categories=Network;WebBrowser;
+MimeType=text/html;text/xml;application/xhtml+xml;x-scheme-handler/http;x-scheme-handler/https;application/x-xpinstall;application/pdf;application/json;
+Actions=new-window;new-private-window;profile-manager-window;
+
+[Desktop Action new-window]
+Name=Open a New Window
+Exec=${INSTALL_DIR}/zen --new-window %u
+
+[Desktop Action new-private-window]
+Name=Open a New Private Window
+Exec=${INSTALL_DIR}/zen --private-window %u
+
+[Desktop Action profile-manager-window]
+Name=Open the Profile Manager
+Exec=${INSTALL_DIR}/zen --ProfileManager
+EOF
+    chmod +x "${DESKTOP_ENTRY}"
+    if command -v gtk-update-icon-cache >/dev/null 2>&1; then
+        gtk-update-icon-cache -f -t "${HOME}/.local/share/icons/hicolor" >/dev/null 2>&1 || true
+    fi
+fi
+
 # Refresh desktop caches
 update-desktop-database "${HOME}/.local/share/applications" >/dev/null 2>&1 || true
 kbuildsycoca6 --noincremental >/dev/null 2>&1 || true
