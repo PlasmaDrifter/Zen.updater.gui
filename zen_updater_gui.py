@@ -1421,9 +1421,9 @@ class ZenUpdaterWindow(QMainWindow):
         elif self.install_info["type"] == "system":
             if result["update_available"]:
                 self.status_banner.setCursor(Qt.CursorShape.PointingHandCursor)
-                self.status_banner.setToolTip("System package detected")
+                self.status_banner.setToolTip("System packages must be updated via your distribution package manager. Click if you wish to install a separate official portable release.")
                 self.lbl_lat_ver.setStyleSheet("font-size: 15px; font-weight: bold; color: #d29922; border: none; background: transparent;")
-                self.status_banner.setText(f"⚠  System Package Detected ({result['current_version']})  —  New {result['latest_version']} Available")
+                self.status_banner.setText(f"⚠  System Package Detected ({result['current_version']})  —  Update via Package Manager (or Install Portable)")
                 self.status_banner.setStyleSheet("""
                     QLabel {
                         padding: 10px;
