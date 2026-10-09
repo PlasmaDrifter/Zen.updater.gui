@@ -289,6 +289,8 @@ echo -e "  - Main executable updated: ${INSTALL_DIR}/zen"
 echo -e "  - Profile hardlink refreshed: ${INSTALL_DIR}/zen-youtube"
 echo -e "  - Profile hardlink refreshed: ${INSTALL_DIR}/qbittorrent-webui"
 echo -e "  - All taskbar pins, custom icons, and profiles preserved."
+echo -e "  - Tip: To set any profile as default, launch it, visit"
+echo -e "         about:profiles in Zen, and click 'Set as default profile'."
 echo -e "${GREEN}===============================================${NC}"
 
 if [ -t 0 ]; then

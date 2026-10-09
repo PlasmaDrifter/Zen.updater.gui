@@ -1039,9 +1039,38 @@ class ZenUpdaterWindow(QMainWindow):
         profile_layout.setContentsMargins(16, 12, 16, 12)
         profile_layout.setSpacing(8)
 
+        profile_header_layout = QHBoxLayout()
+        profile_header_layout.setSpacing(6)
+        profile_header_layout.setContentsMargins(0, 0, 0, 0)
+
         lbl_desc = QLabel("PROFILES TO OPEN WHEN CLICKING 'LAUNCH ZEN':")
-        lbl_desc.setStyleSheet("color: #8b949e; font-size: 10px; font-weight: bold; letter-spacing: 0.6px; border: none; background: transparent; padding-bottom: 2px;")
-        profile_layout.addWidget(lbl_desc)
+        lbl_desc.setStyleSheet("color: #8b949e; font-size: 10px; font-weight: bold; letter-spacing: 0.6px; border: none; background: transparent;")
+        profile_header_layout.addWidget(lbl_desc)
+
+        self.btn_profile_help = QPushButton("?")
+        self.btn_profile_help.setFixedSize(18, 18)
+        self.btn_profile_help.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_profile_help.setStyleSheet("""
+            QPushButton {
+                background-color: #21262d;
+                color: #8b949e;
+                border: 1px solid #30363d;
+                border-radius: 9px;
+                font-size: 11px;
+                font-weight: bold;
+                padding: 0px;
+            }
+            QPushButton:hover {
+                background-color: #30363d;
+                color: #58a6ff;
+                border-color: #58a6ff;
+            }
+        """)
+        self.btn_profile_help.clicked.connect(self.show_profile_help)
+        profile_header_layout.addWidget(self.btn_profile_help)
+        profile_header_layout.addStretch()
+
+        profile_layout.addLayout(profile_header_layout)
 
         self.profile_checkboxes = {}
         grid_layout = QGridLayout()
@@ -1632,6 +1661,8 @@ class ZenUpdaterWindow(QMainWindow):
                 f"Zen Browser appears to be installed via Flatpak.\n\n"
                 f"Flatpak versions are managed and updated through Flathub or your Software Center.\n\n"
                 f"Proceeding here will install a separate portable copy of Zen Browser to:\n{target_dir}\n\n"
+                f"Note: Your existing Flatpak profile will be detected in the profile list below. "
+                f"You can launch it and set it as your default profile anytime in 'about:profiles'.\n\n"
                 f"{backup_note}"
                 "Do you want to proceed with installing a separate portable version?"
             )
@@ -1640,6 +1671,8 @@ class ZenUpdaterWindow(QMainWindow):
                 f"Zen Browser appears to be installed via your system package manager.\n\n"
                 f"It is recommended to update system packages through your distribution package manager.\n\n"
                 f"Proceeding here will install a separate portable copy of Zen Browser in your user directory:\n{target_dir}\n\n"
+                f"Note: Your existing profile will be detected in the profile list below. "
+                f"You can launch it and set it as your default profile anytime in 'about:profiles'.\n\n"
                 f"{backup_note}"
                 "Do you want to proceed with installing a separate portable version?"
             )
@@ -1783,6 +1816,8 @@ class ZenUpdaterWindow(QMainWindow):
                 }
             """)
             self.append_log("\n✓ Update complete! You can now launch your Zen profiles.\n")
+            if len(self.profiles) > 1:
+                self.append_log("Tip: To make a profile your permanent default, launch it, navigate to\n     about:profiles in the URL bar, and click 'Set as default profile'.\n")
             self.start_check()
         else:
             self.btn_run.setEnabled(True)
@@ -1809,6 +1844,18 @@ class ZenUpdaterWindow(QMainWindow):
         )
         pos = self.btn_backup_help.mapToGlobal(QPoint(self.btn_backup_help.width() // 2, self.btn_backup_help.height() + 4))
         QToolTip.showText(pos, help_text, self.btn_backup_help)
+
+    def show_profile_help(self):
+        help_text = (
+            "<b>Profile Management & Migration:</b><br><br>"
+            "• <b>Switching to Portable:</b> If you installed the portable version after using a Flatpak or repo package, "
+            "select your previous profile checkbox here to launch it.<br>"
+            "• <b>Setting as Default:</b> Once Zen opens, type <code>about:profiles</code> in the address bar, "
+            "find your preferred profile, and click <b>Set as default profile</b>.<br>"
+            "• <b>Multi-Profile:</b> Checked profiles launch staggered by 250ms when clicking 'Launch Zen'."
+        )
+        pos = self.btn_profile_help.mapToGlobal(QPoint(self.btn_profile_help.width() // 2, self.btn_profile_help.height() + 4))
+        QToolTip.showText(pos, help_text, self.btn_profile_help)
 
     def launch_zen(self):
         dismiss_zen_notification()

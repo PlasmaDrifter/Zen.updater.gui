@@ -162,6 +162,19 @@ The background timer checks for updates every 6 hours and 5 minutes after system
 
 ---
 
+## Profile Management & Migration
+
+When installing the portable version of Zen Browser on a system that previously ran a Flatpak or Linux distribution package, Zen creates a fresh profile registry for the portable binary. The Updater GUI automatically detects all existing profiles across installations.
+
+### Setting Your Previous Profile as Default
+
+1. **Launch the Profile**: In the Zen Updater GUI, expand **Launch Profiles**, check your existing profile (e.g. `Default Profile [Flatpak]` or distro profile), and click **Launch Zen**.
+2. **Open Profile Manager**: In the Zen address bar, navigate to `about:profiles`.
+3. **Set as Default**: Find your preferred profile in the list and click **Set as default profile**.
+4. Zen will now open directly into your profile whenever launched from desktop shortcuts or application menus.
+
+---
+
 ## Configuration & File Locations
 
 | File | Purpose |
