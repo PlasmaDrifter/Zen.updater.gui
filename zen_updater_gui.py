@@ -1127,15 +1127,15 @@ class ZenUpdaterWindow(QMainWindow):
         self.chk_backup.setCursor(Qt.CursorShape.PointingHandCursor)
         self.chk_backup.setStyleSheet(get_checkbox_qss())
         self.btn_backup_help = QPushButton("?")
-        self.btn_backup_help.setFixedSize(20, 20)
+        self.btn_backup_help.setFixedSize(17, 17)
         self.btn_backup_help.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_backup_help.setStyleSheet("""
             QPushButton {
                 background-color: #21262d;
                 color: #e3b341;
                 border: 1.5px solid #d29922;
-                border-radius: 10px;
-                font-size: 11px;
+                border-radius: 8px;
+                font-size: 10px;
                 font-weight: bold;
                 padding: 0px;
             }
@@ -1241,7 +1241,7 @@ class ZenUpdaterWindow(QMainWindow):
         profile_header_layout.addWidget(lbl_desc)
 
         self.btn_profile_help = QPushButton("?")
-        self.btn_profile_help.setFixedSize(22, 22)
+        self.btn_profile_help.setFixedSize(17, 17)
         self.btn_profile_help.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_profile_help.setToolTip("Click for Profile Migration & Default Setup guide")
         self.btn_profile_help.setStyleSheet("""
@@ -1249,8 +1249,8 @@ class ZenUpdaterWindow(QMainWindow):
                 background-color: #21262d;
                 color: #e3b341;
                 border: 1.5px solid #d29922;
-                border-radius: 11px;
-                font-size: 12px;
+                border-radius: 8px;
+                font-size: 10px;
                 font-weight: bold;
                 padding: 0px;
             }
