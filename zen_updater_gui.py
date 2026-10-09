@@ -1040,7 +1040,7 @@ class ZenUpdaterWindow(QMainWindow):
         profile_layout.setSpacing(8)
 
         profile_header_layout = QHBoxLayout()
-        profile_header_layout.setSpacing(6)
+        profile_header_layout.setSpacing(8)
         profile_header_layout.setContentsMargins(0, 0, 0, 0)
 
         lbl_desc = QLabel("PROFILES TO OPEN WHEN CLICKING 'LAUNCH ZEN':")
@@ -1048,26 +1048,52 @@ class ZenUpdaterWindow(QMainWindow):
         profile_header_layout.addWidget(lbl_desc)
 
         self.btn_profile_help = QPushButton("?")
-        self.btn_profile_help.setFixedSize(18, 18)
+        self.btn_profile_help.setFixedSize(22, 22)
         self.btn_profile_help.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_profile_help.setToolTip("Click for Profile Migration & Default Setup guide")
         self.btn_profile_help.setStyleSheet("""
             QPushButton {
                 background-color: #21262d;
-                color: #8b949e;
-                border: 1px solid #30363d;
-                border-radius: 9px;
-                font-size: 11px;
+                color: #58a6ff;
+                border: 1.5px solid #388bfd;
+                border-radius: 11px;
+                font-size: 12px;
                 font-weight: bold;
                 padding: 0px;
             }
             QPushButton:hover {
-                background-color: #30363d;
-                color: #58a6ff;
+                background-color: #388bfd;
+                color: #ffffff;
                 border-color: #58a6ff;
             }
         """)
         self.btn_profile_help.clicked.connect(self.show_profile_help)
         profile_header_layout.addWidget(self.btn_profile_help)
+
+        # Migration badge button shown if Flatpak or Repo profiles / installs are detected
+        self.btn_migration_badge = QPushButton("Migration Guide")
+        self.btn_migration_badge.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_migration_badge.setToolTip("Click to view instructions on migrating existing profiles to this installation")
+        self.btn_migration_badge.setStyleSheet("""
+            QPushButton {
+                background-color: rgba(56, 139, 253, 0.15);
+                color: #79c0ff;
+                border: 1px solid #388bfd;
+                border-radius: 11px;
+                font-size: 10px;
+                font-weight: bold;
+                padding: 2px 9px;
+            }
+            QPushButton:hover {
+                background-color: #388bfd;
+                color: #ffffff;
+                border-color: #58a6ff;
+            }
+        """)
+        self.btn_migration_badge.clicked.connect(self.show_migration_dialog)
+        self.btn_migration_badge.setVisible(False)
+        profile_header_layout.addWidget(self.btn_migration_badge)
+
         profile_header_layout.addStretch()
 
         profile_layout.addLayout(profile_header_layout)
@@ -1636,6 +1662,17 @@ class ZenUpdaterWindow(QMainWindow):
             """)
             self.btn_run.setEnabled(True)
 
+        # Show migration badge if Flatpak/System install is detected or external profiles exist
+        has_ext_profiles = any(
+            p.get("full_path") and not p.get("ini_file", "").endswith(".zen/profiles.ini")
+            for p in self.profiles
+        )
+        is_alt_install = self.install_info.get("type") in ("flatpak", "system")
+        if (is_alt_install or has_ext_profiles) and len(self.profiles) > 0:
+            self.btn_migration_badge.setVisible(True)
+        else:
+            self.btn_migration_badge.setVisible(False)
+
     def run_update(self):
         if not os.path.isfile(UPDATE_SCRIPT):
             QMessageBox.critical(self, "Error", f"Update script not found at:\n{UPDATE_SCRIPT}")
@@ -1856,6 +1893,27 @@ class ZenUpdaterWindow(QMainWindow):
         )
         pos = self.btn_profile_help.mapToGlobal(QPoint(self.btn_profile_help.width() // 2, self.btn_profile_help.height() + 4))
         QToolTip.showText(pos, help_text, self.btn_profile_help)
+
+    def show_migration_dialog(self):
+        msg_box = QMessageBox(self)
+        msg_box.setWindowTitle("Profile Migration Guide")
+        msg_box.setIcon(QMessageBox.Icon.Information)
+        msg_box.setTextFormat(Qt.TextFormat.RichText)
+        msg_box.setText(
+            "<h3>Migrating Existing Profiles to Portable Zen</h3>"
+            "<p>An existing Flatpak or Linux distribution installation was detected on your system. "
+            "Your existing bookmarks, logins, and tabs are fully preserved.</p>"
+            "<p><b>How to set your existing profile as default:</b></p>"
+            "<ol style='margin-left: -15px;'>"
+            "<li>Under <b>Launch Profiles</b>, check your previous profile (e.g. <i>Default Profile [Flatpak]</i>).</li>"
+            "<li>Click <b>Launch Zen</b>. Zen will open with your data safely loaded.</li>"
+            "<li>In Zen's address bar, type <code>about:profiles</code> and hit Enter.</li>"
+            "<li>Find your profile in the list and click <b>Set as default profile</b>.</li>"
+            "</ol>"
+            "<p>From now on, all application menu shortcuts and browser links will open your profile automatically!</p>"
+        )
+        msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+        msg_box.exec()
 
     def launch_zen(self):
         dismiss_zen_notification()
