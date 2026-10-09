@@ -112,24 +112,25 @@ EOF
 fi
 
 # 2. Close / terminate all running Zen instances
-if pgrep -f "${INSTALL_DIR}" > /dev/null 2>&1 || pgrep -x "zen|zen-bin|zen-browser|zen-youtube|qbittorrent-web.*" > /dev/null 2>&1; then
+SCRIPT_PID="$$"
+if pgrep -f "^${INSTALL_DIR}/" > /dev/null 2>&1 || pgrep -x "zen|zen-bin|zen-browser|zen-youtube|qbittorrent-web.*" > /dev/null 2>&1; then
     echo -e "\n${CYAN}Closing all running Zen Browser instances...${NC}"
     killall zen zen-youtube qbittorrent-webui qbittorrent-web zen-bin zen-browser 2>/dev/null || true
-    pkill -f "${INSTALL_DIR}" 2>/dev/null || true
+    pkill --signal 15 -f "^${INSTALL_DIR}/" 2>/dev/null || true
 
     # Wait up to 5 seconds for clean database/session flush
     for i in {1..5}; do
-        if ! pgrep -f "${INSTALL_DIR}" > /dev/null 2>&1 && ! pgrep -x "zen|zen-bin|zen-browser|zen-youtube|qbittorrent-web.*" > /dev/null 2>&1; then
+        if ! pgrep -f "^${INSTALL_DIR}/" > /dev/null 2>&1 && ! pgrep -x "zen|zen-bin|zen-browser|zen-youtube|qbittorrent-web.*" > /dev/null 2>&1; then
             break
         fi
         sleep 1
     done
 
-    # Force kill if any process is still hanging
-    if pgrep -f "${INSTALL_DIR}" > /dev/null 2>&1 || pgrep -x "zen|zen-bin|zen-browser|zen-youtube|qbittorrent-web.*" > /dev/null 2>&1; then
+    # Force kill if any browser process is still hanging
+    if pgrep -f "^${INSTALL_DIR}/" > /dev/null 2>&1 || pgrep -x "zen|zen-bin|zen-browser|zen-youtube|qbittorrent-web.*" > /dev/null 2>&1; then
         echo -e "${YELLOW}Force terminating remaining processes...${NC}"
         killall -9 zen zen-youtube qbittorrent-webui qbittorrent-web zen-bin zen-browser 2>/dev/null || true
-        pkill -9 -f "${INSTALL_DIR}" 2>/dev/null || true
+        pkill -9 -f "^${INSTALL_DIR}/" 2>/dev/null || true
         sleep 1
     fi
     echo -e "${GREEN}✓ All Zen instances closed.${NC}"
