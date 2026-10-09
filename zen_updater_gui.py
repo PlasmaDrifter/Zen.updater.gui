@@ -77,6 +77,8 @@ def is_newer_app_version(latest_str, cur_str):
 
 def find_zen_icon():
     candidates = [
+        os.path.expanduser("~/Pictures/Avatar/Square_App_Icons/Set_Dark_Titanium/09_zen_browser.png"),
+        os.path.expanduser("~/.local/share/icons/zen_browser_dark_titanium.png"),
         os.path.join(SCRIPT_DIR, "assets", "icon.png"),
         os.path.join(SCRIPT_DIR, "assets", "zen-updater.png"),
         os.path.expanduser("~/.local/share/icons/zen-updater.png"),
@@ -979,16 +981,21 @@ class ZenUpdaterWindow(QMainWindow):
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QFrame.Shape.NoFrame)
         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOn)
         scroll.setStyleSheet("""
             QScrollArea {
                 background: transparent;
                 border: none;
             }
             QScrollBar:vertical {
-                background-color: #0d1117;
+                background: transparent;
                 width: 8px;
                 border-radius: 4px;
                 margin: 0px;
+            }
+            QScrollBar::track:vertical {
+                background: transparent;
+                border: none;
             }
             QScrollBar::handle:vertical {
                 background-color: #30363d;
