@@ -1005,7 +1005,7 @@ class ZenUpdaterWindow(QMainWindow):
 
         title_row = QHBoxLayout()
         title_row.setSpacing(8)
-        title_row.setAlignment(Qt.AlignmentFlag.AlignVCenter)
+        title_row.setAlignment(Qt.AlignmentFlag.AlignBottom)
         title_label = QLabel("Zen Browser Updater")
         title_font = QFont()
         title_font.setPointSize(14)
@@ -1013,34 +1013,10 @@ class ZenUpdaterWindow(QMainWindow):
         title_label.setFont(title_font)
 
         ver_label = QLabel(APP_VERSION)
-        ver_label.setStyleSheet("color: #8b949e; font-size: 11px;")
-
-        # Header badge for app update (centered next to app title & version)
-        self.badge_app_update = QPushButton("Update Available")
-        self.badge_app_update.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.badge_app_update.setToolTip("A new release of Zen Updater is available. Click to view.")
-        self.badge_app_update.setStyleSheet("""
-            QPushButton {
-                background-color: rgba(248, 81, 73, 0.15);
-                color: #ff9b9b;
-                border: 1px solid #f85149;
-                border-radius: 9px;
-                font-size: 10px;
-                font-weight: bold;
-                padding: 1px 8px;
-            }
-            QPushButton:hover {
-                background-color: #d73a49;
-                color: #ffffff;
-                border-color: #ff7b72;
-            }
-        """)
-        self.badge_app_update.setVisible(False)
-        self.badge_app_update.clicked.connect(self.on_app_update_badge_clicked)
+        ver_label.setStyleSheet("color: #8b949e; font-size: 11px; padding-bottom: 2px;")
 
         title_row.addWidget(title_label)
         title_row.addWidget(ver_label)
-        title_row.addWidget(self.badge_app_update)
         title_row.addStretch()
         title_vbox.addLayout(title_row)
 
@@ -1049,6 +1025,30 @@ class ZenUpdaterWindow(QMainWindow):
         title_vbox.addWidget(subtitle_label)
         header_layout.addLayout(title_vbox)
         header_layout.addStretch()
+
+        # Header badge for app update (anchored to the right side of header, matching update green)
+        self.badge_app_update = QPushButton("Update Available")
+        self.badge_app_update.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.badge_app_update.setToolTip("A new release of Zen Updater is available. Click to view.")
+        self.badge_app_update.setStyleSheet("""
+            QPushButton {
+                background-color: rgba(46, 160, 67, 0.15);
+                color: #a6f3a6;
+                border: 1px solid #2ea043;
+                border-radius: 10px;
+                font-size: 10px;
+                font-weight: bold;
+                padding: 3px 10px;
+            }
+            QPushButton:hover {
+                background-color: #2ea043;
+                color: #ffffff;
+                border-color: #3fb950;
+            }
+        """)
+        self.badge_app_update.setVisible(False)
+        self.badge_app_update.clicked.connect(self.on_app_update_badge_clicked)
+        header_layout.addWidget(self.badge_app_update, alignment=Qt.AlignmentFlag.AlignVCenter)
         main_layout.addLayout(header_layout)
 
         # 2. Version Information Card (Side-by-Side 2-Column Layout)
@@ -1127,22 +1127,22 @@ class ZenUpdaterWindow(QMainWindow):
         self.chk_backup.setCursor(Qt.CursorShape.PointingHandCursor)
         self.chk_backup.setStyleSheet(get_checkbox_qss())
         self.btn_backup_help = QPushButton("?")
-        self.btn_backup_help.setFixedSize(18, 18)
+        self.btn_backup_help.setFixedSize(20, 20)
         self.btn_backup_help.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_backup_help.setStyleSheet("""
             QPushButton {
                 background-color: #21262d;
-                color: #8b949e;
-                border: 1px solid #30363d;
-                border-radius: 9px;
+                color: #e3b341;
+                border: 1.5px solid #d29922;
+                border-radius: 10px;
                 font-size: 11px;
                 font-weight: bold;
                 padding: 0px;
             }
             QPushButton:hover {
-                background-color: #30363d;
-                color: #58a6ff;
-                border-color: #58a6ff;
+                background-color: #bb8009;
+                color: #ffffff;
+                border-color: #e3b341;
             }
         """)
         self.btn_backup_help.clicked.connect(self.show_backup_info)
@@ -1247,17 +1247,17 @@ class ZenUpdaterWindow(QMainWindow):
         self.btn_profile_help.setStyleSheet("""
             QPushButton {
                 background-color: #21262d;
-                color: #58a6ff;
-                border: 1.5px solid #388bfd;
+                color: #e3b341;
+                border: 1.5px solid #d29922;
                 border-radius: 11px;
                 font-size: 12px;
                 font-weight: bold;
                 padding: 0px;
             }
             QPushButton:hover {
-                background-color: #388bfd;
+                background-color: #bb8009;
                 color: #ffffff;
-                border-color: #58a6ff;
+                border-color: #e3b341;
             }
         """)
         self.btn_profile_help.clicked.connect(self.show_profile_help)
