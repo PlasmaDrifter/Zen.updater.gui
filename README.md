@@ -41,6 +41,10 @@ Zen Browser on Linux is frequently distributed as an official portable tarball r
   - Opening the Updater GUI or running an update sends a DBus `CloseNotification` signal, immediately clearing stale alerts from your notification center.
 - **Isolated Profile Binary Re-linking**:
   - After unpacking new Zen binaries, the engine dynamically discovers and refreshes binary hardlinks (such as `zen-youtube` or `qbittorrent-webui`), preserving taskbar pins, application classes, and custom dock icons.
+- **Zen Updater Self-Updater**:
+  - Dedicated expandable card to inspect and install updates to the updater itself directly from GitHub Releases.
+  - Optional automatic startup check (disabled by default) that displays a prominent update badge centered in the header next to the version number.
+  - One-click update with seamless in-place restart via `os.execv`.
 - **Fully Portable Across Any Linux Setup**:
   - No hardcoded usernames, home directories, or distro-specific paths.
   - Cascading icon fallback (custom icons -> official bundled Zen icons -> system theme icons).

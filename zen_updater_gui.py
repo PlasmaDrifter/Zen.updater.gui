@@ -25,8 +25,54 @@ from PyQt6.QtWidgets import (
     QMessageBox, QGridLayout, QCheckBox, QScrollArea, QComboBox, QToolTip
 )
 
-APP_VERSION = "v1.0.6"
+APP_VERSION = "v1.0.4"  # Set to v1.0.4 for test update (latest GitHub release is v1.0.5)
+APP_REPO = "PlasmaDrifter/Zen.updater.gui"
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+
+
+def load_app_settings():
+    path = os.path.expanduser("~/.config/zen-updater/settings.json")
+    if os.path.isfile(path):
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {}
+
+
+def save_app_setting(key, val):
+    config_dir = os.path.expanduser("~/.config/zen-updater")
+    os.makedirs(config_dir, exist_ok=True)
+    path = os.path.join(config_dir, "settings.json")
+    settings = load_app_settings()
+    settings[key] = val
+    try:
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(settings, f, indent=2)
+    except Exception as e:
+        print("Error saving setting:", e)
+
+
+def parse_app_version(ver_str):
+    clean = re.sub(r'^[^\d]*', '', str(ver_str).strip())
+    parts = []
+    for part in clean.split('.'):
+        digits = re.match(r'^\d+', part)
+        if digits:
+            parts.append(int(digits.group(0)))
+        else:
+            break
+    while len(parts) < 3:
+        parts.append(0)
+    return tuple(parts[:3])
+
+
+def is_newer_app_version(latest_str, cur_str):
+    try:
+        return parse_app_version(latest_str) > parse_app_version(cur_str)
+    except Exception:
+        return False
 
 
 def find_zen_icon():
@@ -420,12 +466,7 @@ class ZenProfileManager:
         return selected
 
     def save_selected_profiles(self, selected_set):
-        os.makedirs(self.config_dir, exist_ok=True)
-        try:
-            with open(self.settings_file, "w") as f:
-                json.dump({"selected_profiles": sorted(list(selected_set))}, f, indent=2)
-        except Exception as e:
-            print("Error saving settings:", e)
+        save_app_setting("selected_profiles", sorted(list(selected_set)))
 
     def sync_profile_binaries(self):
         """Ensures all isolated profile executables match the main zen binary hardlink."""
@@ -771,6 +812,126 @@ class CheckVersionWorker(QThread):
         self.finished.emit(result)
 
 
+class CheckAppReleaseWorker(QThread):
+    finished = pyqtSignal(dict)
+
+    def run(self):
+        result = {
+            "has_update": False,
+            "latest_version": "Unknown",
+            "release_date": "Unknown",
+            "release_url": "",
+            "tarball_url": "",
+            "body": "",
+            "error": None
+        }
+        url = f"https://api.github.com/repos/{APP_REPO}/releases/latest"
+        req = urllib.request.Request(
+            url,
+            headers={
+                "User-Agent": f"ZenUpdater/{APP_VERSION}",
+                "Accept": "application/vnd.github.v3+json"
+            }
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=8) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+                latest_tag = data.get("tag_name", "").strip()
+                result["latest_version"] = latest_tag
+                result["release_url"] = data.get("html_url", "")
+                result["tarball_url"] = data.get("tarball_url", "")
+                result["body"] = data.get("body", "")
+                pub_date = data.get("published_at", "")
+                result["release_date"] = format_iso_date(pub_date) if pub_date else "Unknown"
+                if latest_tag and is_newer_app_version(latest_tag, APP_VERSION):
+                    result["has_update"] = True
+        except urllib.error.HTTPError as e:
+            result["error"] = f"HTTP {e.code}: {e.reason}"
+        except Exception as e:
+            result["error"] = str(e)
+
+        self.finished.emit(result)
+
+
+class ApplyAppUpdateWorker(QThread):
+    progress = pyqtSignal(str)
+    finished = pyqtSignal(bool, str)
+
+    def __init__(self, target_version):
+        super().__init__()
+        self.target_version = target_version
+
+    def run(self):
+        try:
+            import tempfile, tarfile
+            self.progress.emit(f"Downloading Zen Updater {self.target_version}...")
+
+            git_dir = os.path.join(SCRIPT_DIR, ".git")
+            if os.path.isdir(git_dir):
+                self.progress.emit("Updating via git repository...")
+                subprocess.run(["git", "fetch", "--tags"], cwd=SCRIPT_DIR, capture_output=True, text=True)
+                res = subprocess.run(["git", "checkout", self.target_version], cwd=SCRIPT_DIR, capture_output=True, text=True)
+                if res.returncode != 0:
+                    subprocess.run(["git", "pull", "origin", "main"], cwd=SCRIPT_DIR, capture_output=True, text=True)
+                inst_sh = os.path.join(SCRIPT_DIR, "install.sh")
+                if os.path.isfile(inst_sh):
+                    self.progress.emit("Running installer script...")
+                    subprocess.run(["bash", inst_sh], cwd=SCRIPT_DIR, check=True)
+            else:
+                download_url = f"https://github.com/{APP_REPO}/archive/refs/tags/{self.target_version}.tar.gz"
+                req = urllib.request.Request(
+                    download_url,
+                    headers={"User-Agent": f"ZenUpdater/{APP_VERSION}"}
+                )
+                with tempfile.TemporaryDirectory() as tmp_dir:
+                    tar_path = os.path.join(tmp_dir, "release.tar.gz")
+                    with urllib.request.urlopen(req, timeout=20) as resp, open(tar_path, "wb") as out_f:
+                        shutil.copyfileobj(resp, out_f)
+
+                    self.progress.emit("Extracting release files...")
+                    with tarfile.open(tar_path, "r:gz") as tar:
+                        tar.extractall(path=tmp_dir)
+
+                    extracted_root = None
+                    for entry in os.listdir(tmp_dir):
+                        full_p = os.path.join(tmp_dir, entry)
+                        if os.path.isdir(full_p) and entry.startswith("Zen.updater.gui"):
+                            extracted_root = full_p
+                            break
+                    if not extracted_root:
+                        for entry in os.listdir(tmp_dir):
+                            full_p = os.path.join(tmp_dir, entry)
+                            if os.path.isdir(full_p) and entry != "__pycache__":
+                                extracted_root = full_p
+                                break
+
+                    if not extracted_root:
+                        raise RuntimeError("Could not locate extracted release archive directory.")
+
+                    inst_sh = os.path.join(extracted_root, "install.sh")
+                    if os.path.isfile(inst_sh):
+                        self.progress.emit("Running installer script...")
+                        subprocess.run(["bash", inst_sh], cwd=extracted_root, check=True)
+                    else:
+                        bin_dir = os.path.expanduser("~/.local/bin")
+                        for f in ["zen_updater_gui.py", "update_zen.sh", "check_zen_update.sh", "zen_backup.tarignore"]:
+                            src = os.path.join(extracted_root, f)
+                            if os.path.isfile(src):
+                                dst = os.path.join(bin_dir, f)
+                                shutil.copy2(src, dst)
+                                os.chmod(dst, 0o755)
+
+            target_py = os.path.expanduser("~/.local/bin/zen_updater_gui.py")
+            if os.path.isfile(target_py):
+                comp_res = subprocess.run([sys.executable, "-m", "py_compile", target_py], capture_output=True, text=True)
+                if comp_res.returncode != 0:
+                    raise RuntimeError(f"Syntax validation failed: {comp_res.stderr}")
+
+            self.finished.emit(True, f"Successfully updated Zen Updater to {self.target_version}!")
+        except Exception as e:
+            self.finished.emit(False, str(e))
+
+
 class ZenUpdaterWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -797,6 +958,10 @@ class ZenUpdaterWindow(QMainWindow):
         self.process = None
         self.update_available = False
 
+        self.app_check_worker = None
+        self.app_apply_worker = None
+        self.app_update_info = {}
+
         # Clear any pending desktop notification when updater is opened
         dismiss_zen_notification()
 
@@ -804,6 +969,10 @@ class ZenUpdaterWindow(QMainWindow):
 
         # Automatically check for updates when opened
         QTimer.singleShot(150, self.start_check)
+
+        # If user enabled auto-check for updater updates on startup, trigger background check
+        if self.load_auto_check_app_setting():
+            QTimer.singleShot(800, lambda: self.start_app_update_check(silent=True))
 
     def setup_ui(self):
         central = QWidget(self)
@@ -836,7 +1005,7 @@ class ZenUpdaterWindow(QMainWindow):
 
         title_row = QHBoxLayout()
         title_row.setSpacing(8)
-        title_row.setAlignment(Qt.AlignmentFlag.AlignBottom)
+        title_row.setAlignment(Qt.AlignmentFlag.AlignVCenter)
         title_label = QLabel("Zen Browser Updater")
         title_font = QFont()
         title_font.setPointSize(14)
@@ -844,10 +1013,34 @@ class ZenUpdaterWindow(QMainWindow):
         title_label.setFont(title_font)
 
         ver_label = QLabel(APP_VERSION)
-        ver_label.setStyleSheet("color: #8b949e; font-size: 11px; padding-bottom: 2px;")
+        ver_label.setStyleSheet("color: #8b949e; font-size: 11px;")
+
+        # Header badge for app update (centered next to app title & version)
+        self.badge_app_update = QPushButton("Update Available")
+        self.badge_app_update.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.badge_app_update.setToolTip("A new release of Zen Updater is available. Click to view.")
+        self.badge_app_update.setStyleSheet("""
+            QPushButton {
+                background-color: rgba(248, 81, 73, 0.15);
+                color: #ff9b9b;
+                border: 1px solid #f85149;
+                border-radius: 9px;
+                font-size: 10px;
+                font-weight: bold;
+                padding: 1px 8px;
+            }
+            QPushButton:hover {
+                background-color: #d73a49;
+                color: #ffffff;
+                border-color: #ff7b72;
+            }
+        """)
+        self.badge_app_update.setVisible(False)
+        self.badge_app_update.clicked.connect(self.on_app_update_badge_clicked)
 
         title_row.addWidget(title_label)
         title_row.addWidget(ver_label)
+        title_row.addWidget(self.badge_app_update)
         title_row.addStretch()
         title_vbox.addLayout(title_row)
 
@@ -1254,7 +1447,166 @@ class ZenUpdaterWindow(QMainWindow):
         main_layout.addWidget(self.timer_frame)
         self.refresh_timer_status_label()
 
-        # 8. Real-Time Progress Bar
+        # 8. Expandable Zen Updater Updates Section (Self-Updater)
+        self.btn_toggle_app_update = QPushButton()
+        self.btn_toggle_app_update.setObjectName("appUpdateToggleBtn")
+        self.btn_toggle_app_update.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_toggle_app_update.setStyleSheet("""
+            QPushButton#appUpdateToggleBtn {
+                text-align: left;
+                background-color: #1e2530;
+                border: 1px solid #334155;
+                border-radius: 6px;
+                color: #60a5fa;
+                font-size: 12px;
+                font-weight: bold;
+                padding: 8px 12px;
+            }
+            QPushButton#appUpdateToggleBtn:hover {
+                background-color: #263140;
+                border-color: #475569;
+                color: #93c5fd;
+            }
+        """)
+        self.btn_toggle_app_update.clicked.connect(self.toggle_app_update_expanded)
+
+        self.app_update_frame = QFrame()
+        self.app_update_frame.setObjectName("appUpdateCard")
+        self.app_update_frame.setStyleSheet("""
+            QFrame#appUpdateCard {
+                background-color: #151a22;
+                border: 1px solid #30363d;
+                border-radius: 8px;
+            }
+""" + get_checkbox_qss())
+        app_update_layout = QVBoxLayout(self.app_update_frame)
+        app_update_layout.setContentsMargins(16, 12, 16, 12)
+        app_update_layout.setSpacing(10)
+
+        lbl_app_desc = QLabel("ZEN UPDATER APPLICATION UPDATES:")
+        lbl_app_desc.setStyleSheet("color: #8b949e; font-size: 10px; font-weight: bold; letter-spacing: 0.6px; border: none; background: transparent;")
+        app_update_layout.addWidget(lbl_app_desc)
+
+        # Checkbox: Automatic startup check (off by default)
+        self.chk_auto_check_app = QCheckBox("Check for updater updates automatically on startup")
+        self.chk_auto_check_app.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.chk_auto_check_app.setChecked(self.load_auto_check_app_setting())
+        self.chk_auto_check_app.toggled.connect(self.on_auto_check_app_toggled)
+        app_update_layout.addWidget(self.chk_auto_check_app)
+
+        # Version Info Row
+        ver_info_layout = QHBoxLayout()
+        ver_info_layout.setSpacing(16)
+
+        v_cur_box = QVBoxLayout()
+        v_cur_box.setSpacing(2)
+        lbl_c_title = QLabel("CURRENT APP VERSION")
+        lbl_c_title.setStyleSheet("color: #8b949e; font-size: 10px; font-weight: bold; border: none; background: transparent;")
+        self.lbl_app_cur_ver = QLabel(APP_VERSION)
+        self.lbl_app_cur_ver.setStyleSheet("font-size: 14px; font-weight: bold; color: #ffffff; border: none; background: transparent;")
+        v_cur_box.addWidget(lbl_c_title)
+        v_cur_box.addWidget(self.lbl_app_cur_ver)
+
+        v_lat_box = QVBoxLayout()
+        v_lat_box.setSpacing(2)
+        lbl_l_title = QLabel("LATEST RELEASE")
+        lbl_l_title.setStyleSheet("color: #8b949e; font-size: 10px; font-weight: bold; border: none; background: transparent;")
+        self.lbl_app_lat_ver = QLabel("Not checked yet")
+        self.lbl_app_lat_ver.setStyleSheet("font-size: 14px; font-weight: bold; color: #58a6ff; border: none; background: transparent;")
+        v_lat_box.addWidget(lbl_l_title)
+        v_lat_box.addWidget(self.lbl_app_lat_ver)
+
+        ver_info_layout.addLayout(v_cur_box, 1)
+        ver_info_layout.addLayout(v_lat_box, 1)
+        app_update_layout.addLayout(ver_info_layout)
+
+        # Action Buttons Row
+        app_btn_layout = QHBoxLayout()
+        app_btn_layout.setSpacing(10)
+
+        self.btn_check_app_update = QPushButton("Check for Updates")
+        self.btn_check_app_update.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_check_app_update.setStyleSheet("""
+            QPushButton {
+                background-color: #21262d;
+                border: 1px solid #30363d;
+                border-radius: 6px;
+                color: #c9d1d9;
+                font-size: 11px;
+                padding: 6px 12px;
+            }
+            QPushButton:hover {
+                background-color: #30363d;
+                color: #ffffff;
+            }
+        """)
+        self.btn_check_app_update.clicked.connect(lambda: self.start_app_update_check(silent=False))
+        app_btn_layout.addWidget(self.btn_check_app_update)
+
+        self.btn_apply_app_update = QPushButton("Update Zen Updater")
+        self.btn_apply_app_update.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_apply_app_update.setEnabled(False)
+        self.btn_apply_app_update.setStyleSheet("""
+            QPushButton {
+                background-color: rgba(46, 160, 67, 0.15);
+                color: #a6f3a6;
+                font-weight: bold;
+                font-size: 11px;
+                border: 1px solid #2ea043;
+                border-radius: 6px;
+                padding: 6px 14px;
+            }
+            QPushButton:hover {
+                background-color: #2ea043;
+                color: #ffffff;
+            }
+            QPushButton:disabled {
+                background-color: #21262d;
+                color: #6e7681;
+                border-color: #30363d;
+            }
+        """)
+        self.btn_apply_app_update.clicked.connect(self.run_apply_app_update)
+        app_btn_layout.addWidget(self.btn_apply_app_update)
+
+        self.btn_test_app_badge = QPushButton("Test Badge")
+        self.btn_test_app_badge.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_test_app_badge.setToolTip("Toggle the header update badge to preview its appearance")
+        self.btn_test_app_badge.setStyleSheet("""
+            QPushButton {
+                background-color: #21262d;
+                border: 1px solid #30363d;
+                border-radius: 6px;
+                color: #8b949e;
+                font-size: 11px;
+                padding: 6px 10px;
+            }
+            QPushButton:hover {
+                background-color: #30363d;
+                color: #c9d1d9;
+            }
+        """)
+        self.btn_test_app_badge.clicked.connect(self.toggle_test_app_badge)
+        app_btn_layout.addWidget(self.btn_test_app_badge)
+
+        app_btn_layout.addStretch()
+        app_update_layout.addLayout(app_btn_layout)
+
+        # Status text in card
+        self.lbl_app_update_status = QLabel("")
+        self.lbl_app_update_status.setStyleSheet("font-size: 11px; color: #8b949e;")
+        self.lbl_app_update_status.setWordWrap(True)
+        app_update_layout.addWidget(self.lbl_app_update_status)
+
+        self.app_update_expanded = False
+        self.app_update_frame.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Maximum)
+        self.app_update_frame.setVisible(False)
+
+        main_layout.addWidget(self.btn_toggle_app_update)
+        main_layout.addWidget(self.app_update_frame)
+        self.update_app_update_toggle_text()
+
+        # 9. Real-Time Progress Bar
         self.progress_bar = QProgressBar()
         self.progress_bar.setRange(0, 100)
         self.progress_bar.setValue(0)
@@ -1366,6 +1718,132 @@ class ZenUpdaterWindow(QMainWindow):
             self.append_log("✓ Background check initiated. If an update is available, a notification will appear.\n")
         else:
             self.append_log(f"Error triggering background check: {msg}\n")
+
+    def load_auto_check_app_setting(self):
+        settings = load_app_settings()
+        return bool(settings.get("auto_check_app_updates", False))
+
+    def on_auto_check_app_toggled(self, checked):
+        save_app_setting("auto_check_app_updates", checked)
+        status = "enabled" if checked else "disabled"
+        self.append_log(f"\n[Zen Updater] Automatic update checks on startup {status}.\n")
+
+    def toggle_app_update_expanded(self):
+        self.app_update_expanded = not self.app_update_expanded
+        self.app_update_frame.setVisible(self.app_update_expanded)
+        self.update_app_update_toggle_text()
+
+    def update_app_update_toggle_text(self):
+        arrow = "▼" if self.app_update_expanded else "▶"
+        has_upd = getattr(self, "app_update_info", {}).get("has_update", False)
+        upd_str = "Update Available" if has_upd else "Check & update application"
+        hint = "Hide settings" if self.app_update_expanded else upd_str
+        self.btn_toggle_app_update.setText(f"{arrow} Zen Updater Updates ({APP_VERSION}) — {hint}")
+
+    def on_app_update_badge_clicked(self):
+        if not self.app_update_expanded:
+            self.toggle_app_update_expanded()
+        self.btn_apply_app_update.setFocus()
+
+    def toggle_test_app_badge(self):
+        if self.badge_app_update.isVisible():
+            self.badge_app_update.setVisible(False)
+            self.lbl_app_update_status.setText("Test badge hidden.")
+            self.btn_apply_app_update.setEnabled(False)
+        else:
+            self.badge_app_update.setText("Update Available (v1.0.5)")
+            self.badge_app_update.setVisible(True)
+            self.lbl_app_lat_ver.setText("v1.0.5 (Released: Oct 09, 2026)")
+            self.lbl_app_update_status.setText("Test update simulated: Header badge is now visible to the right of the version number.")
+            self.btn_apply_app_update.setEnabled(True)
+            self.app_update_info = {"has_update": True, "latest_version": "v1.0.5"}
+            self.update_app_update_toggle_text()
+
+    def start_app_update_check(self, silent=False):
+        if self.app_check_worker and self.app_check_worker.isRunning():
+            return
+
+        if not silent:
+            self.btn_check_app_update.setEnabled(False)
+            self.lbl_app_lat_ver.setText("Checking GitHub...")
+            self.lbl_app_update_status.setText("Querying GitHub releases for Zen Updater updates...")
+
+        self.app_check_worker = CheckAppReleaseWorker()
+        self.app_check_worker.finished.connect(lambda res: self.on_app_update_check_finished(res, silent))
+        self.app_check_worker.start()
+
+    def on_app_update_check_finished(self, result, silent):
+        self.btn_check_app_update.setEnabled(True)
+        self.app_update_info = result
+
+        if result.get("error"):
+            if not silent:
+                self.lbl_app_lat_ver.setText("Check failed")
+                self.lbl_app_update_status.setText(f"Check failed: {result['error']}")
+            return
+
+        latest_ver = result["latest_version"]
+        pub_date = result["release_date"]
+        self.lbl_app_lat_ver.setText(f"{latest_ver} ({pub_date})")
+
+        if result.get("has_update"):
+            self.badge_app_update.setText(f"Update Available ({latest_ver})")
+            self.badge_app_update.setVisible(True)
+            self.btn_apply_app_update.setEnabled(True)
+            self.lbl_app_update_status.setText(f"A new release ({latest_ver}) is available on GitHub Releases.")
+            self.update_app_update_toggle_text()
+        else:
+            self.badge_app_update.setVisible(False)
+            self.btn_apply_app_update.setEnabled(False)
+            self.lbl_app_update_status.setText(f"Zen Updater is up to date ({APP_VERSION}).")
+            self.update_app_update_toggle_text()
+
+    def run_apply_app_update(self):
+        target_ver = self.app_update_info.get("latest_version") or "v1.0.5"
+        reply = QMessageBox.question(
+            self,
+            "Confirm Zen Updater Update",
+            f"Do you want to update Zen Updater to release {target_ver}?\n\n"
+            "This will download the official release files, update your installation, and restart the application.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.Yes
+        )
+        if reply != QMessageBox.StandardButton.Yes:
+            return
+
+        self.btn_apply_app_update.setEnabled(False)
+        self.btn_check_app_update.setEnabled(False)
+        self.lbl_app_update_status.setText(f"Updating to {target_ver}... Please wait.")
+
+        self.app_apply_worker = ApplyAppUpdateWorker(target_ver)
+        self.app_apply_worker.progress.connect(self.on_apply_app_update_progress)
+        self.app_apply_worker.finished.connect(self.on_apply_app_update_finished)
+        self.app_apply_worker.start()
+
+    def on_apply_app_update_progress(self, msg):
+        self.lbl_app_update_status.setText(msg)
+        self.append_log(f"[Zen Updater Self-Update] {msg}\n")
+
+    def on_apply_app_update_finished(self, success, msg):
+        self.btn_apply_app_update.setEnabled(True)
+        self.btn_check_app_update.setEnabled(True)
+        self.append_log(f"[Zen Updater Self-Update] {msg}\n")
+
+        if success:
+            QMessageBox.information(
+                self,
+                "Update Complete",
+                f"{msg}\n\nThe application will now restart."
+            )
+            QApplication.quit()
+            os.execv(sys.executable, [sys.executable] + sys.argv)
+        else:
+            QMessageBox.critical(
+                self,
+                "Update Failed",
+                f"Failed to update Zen Updater:\n\n{msg}"
+            )
+            self.lbl_app_update_status.setText(f"Update failed: {msg}")
 
     def on_banner_clicked(self, event):
         if getattr(self, "update_available", False) and self.btn_run.isEnabled():

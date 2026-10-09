@@ -35,11 +35,13 @@ echo "Copying scripts to ${BIN_DIR}..."
 cp -f "${SCRIPT_DIR}/zen_updater_gui.py" "${BIN_DIR}/zen_updater_gui.py"
 cp -f "${SCRIPT_DIR}/update_zen.sh" "${BIN_DIR}/update_zen.sh"
 cp -f "${SCRIPT_DIR}/check_zen_update.sh" "${BIN_DIR}/check_zen_update.sh"
+cp -f "${SCRIPT_DIR}/update_updater.sh" "${BIN_DIR}/update_updater.sh"
 cp -f "${SCRIPT_DIR}/zen_backup.tarignore" "${BIN_DIR}/zen_backup.tarignore"
 
 chmod +x "${BIN_DIR}/zen_updater_gui.py"
 chmod +x "${BIN_DIR}/update_zen.sh"
 chmod +x "${BIN_DIR}/check_zen_update.sh"
+chmod +x "${BIN_DIR}/update_updater.sh"
 
 # Create handy command symlink: zen-updater
 ln -sf "${BIN_DIR}/zen_updater_gui.py" "${BIN_DIR}/zen-updater"
