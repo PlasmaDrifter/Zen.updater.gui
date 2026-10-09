@@ -18,8 +18,16 @@ mkdir -p "${BIN_DIR}" "${APPS_DIR}" "${SYSTEMD_DIR}"
 
 # 2. Check for PyQt6
 if ! python3 -c "import PyQt6" >/dev/null 2>&1; then
-    echo "Warning: PyQt6 is not detected. Please install it via your package manager or pip:"
-    echo "  pip install PyQt6   OR   sudo dnf/apt/pacman install python3-pyqt6"
+    echo "PyQt6 is required but not detected. Attempting to install via pip..."
+    if command -v pip3 >/dev/null 2>&1 || command -v pip >/dev/null 2>&1; then
+        pip install --user PyQt6 || pip3 install --user PyQt6 || true
+    fi
+    if ! python3 -c "import PyQt6" >/dev/null 2>&1; then
+        echo "Warning: PyQt6 could not be automatically installed. Please install it via:"
+        echo "  pip install PyQt6   OR   sudo dnf/apt/pacman install python3-pyqt6"
+    else
+        echo "✓ PyQt6 installed successfully."
+    fi
 fi
 
 # 3. Copy scripts to ~/.local/bin

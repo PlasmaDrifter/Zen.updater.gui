@@ -183,9 +183,9 @@ def ensure_checkmark_icon():
     return CHECKMARK_ICON_PATH
 
 
-ensure_checkmark_icon()
-
-CHECKBOX_QSS = f"""
+def get_checkbox_qss():
+    ensure_checkmark_icon()
+    return f"""
     QCheckBox {{
         color: #e6edf3;
         font-size: 13px;
@@ -216,7 +216,7 @@ CHECKBOX_QSS = f"""
         border-color: #2ea043;
         image: url("{CHECKMARK_ICON_PATH}");
     }}
-"""
+    """
 
 
 def dismiss_zen_notification():
@@ -254,6 +254,7 @@ class ZenProfileManager:
         self.config_dir = os.path.expanduser("~/.config/zen-updater")
         self.settings_file = os.path.join(self.config_dir, "settings.json")
         self.zen_dir = os.path.expanduser("~/.zen")
+        self.ini_path = os.path.join(self.zen_dir, "profiles.ini")
         self.install_dir = INSTALL_INFO["path"] if (INSTALL_INFO["type"] == "tarball" and os.path.isdir(INSTALL_INFO["path"])) else (
             os.path.dirname(APP_INI) if os.path.isfile(APP_INI) else DEFAULT_TARBALL_DIR
         )
@@ -897,7 +898,7 @@ class ZenUpdaterWindow(QMainWindow):
         self.chk_backup = QCheckBox("Backup all profiles before updating or reinstalling")
         self.chk_backup.setChecked(True)
         self.chk_backup.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.chk_backup.setStyleSheet(CHECKBOX_QSS)
+        self.chk_backup.setStyleSheet(get_checkbox_qss())
         self.btn_backup_help = QPushButton("?")
         self.btn_backup_help.setFixedSize(18, 18)
         self.btn_backup_help.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -999,7 +1000,7 @@ class ZenUpdaterWindow(QMainWindow):
                 border: 1px solid #30363d;
                 border-radius: 8px;
             }
-""" + CHECKBOX_QSS)
+""" + get_checkbox_qss())
         profile_layout = QVBoxLayout(self.profile_frame)
         profile_layout.setContentsMargins(16, 12, 16, 12)
         profile_layout.setSpacing(8)
@@ -1069,7 +1070,7 @@ class ZenUpdaterWindow(QMainWindow):
                 border: 1px solid #30363d;
                 border-radius: 8px;
             }
-""" + CHECKBOX_QSS + """
+""" + get_checkbox_qss() + """
             QComboBox {
                 background-color: #0d1117;
                 color: #e6edf3;
