@@ -133,51 +133,6 @@ chmod +x uninstall.sh
 
 ---
 
-## Usage
-
-### 1. Launching the GUI
-
-You can start the updater from your application launcher under **Zen Browser Updater**, or from a terminal:
-
-```bash
-zen-updater
-# Or directly:
-python3 zen_updater_gui.py
-```
-
-### 2. Running the Update Engine Standalone (CLI)
-
-The core updater can be executed without the GUI in scripts or terminal sessions:
-
-```bash
-./update_zen.sh
-```
-
-Flags:
-- `--force` or `-f`: Reinstall or refresh current version even if already up to date.
-- `--no-backup`: Skip pre-update profile backup.
-- `--backup`: Explicitly enforce safety backup (enabled by default).
-- `--install-dir <path>`: Specify target installation directory.
-
-### 3. Background Notification Service
-
-The background timer checks for updates daily (every 24 hours by default) and 5 minutes after system boot:
-
-- View timer status:
-  ```bash
-  systemctl --user status zen-update-check.timer
-  ```
-- View service execution log:
-  ```bash
-  journalctl --user -u zen-update-check.service -n 50 --no-pager
-  ```
-- Trigger an immediate manual test run:
-  ```bash
-  systemctl --user start zen-update-check.service
-  ```
-
----
-
 ## Profile Management & Migration
 
 When installing the portable version of Zen Browser on a system that previously ran a Flatpak or Linux distribution package, Zen creates a fresh profile registry for the portable binary. The Updater GUI automatically detects all existing profiles across installations.
