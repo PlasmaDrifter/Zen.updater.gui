@@ -77,12 +77,11 @@ def is_newer_app_version(latest_str, cur_str):
 
 def find_zen_icon():
     candidates = [
-        os.path.expanduser("~/Pictures/Avatar/Square_App_Icons/Set_Dark_Titanium/09_zen_browser.png"),
-        os.path.expanduser("~/.local/share/icons/zen_browser_dark_titanium.png"),
         os.path.join(SCRIPT_DIR, "assets", "icon.png"),
         os.path.join(SCRIPT_DIR, "assets", "zen-updater.png"),
-        os.path.expanduser("~/.local/share/icons/zen-updater.png"),
         os.path.expanduser("~/Pictures/Avatar/Square_App_Icons/Zen-Browser/zen_browser_ice_steel_256.png"),
+        os.path.expanduser("~/.local/share/icons/zen-updater.png"),
+        os.path.expanduser("~/Pictures/Avatar/Square_App_Icons/Zen-Browser/zen_browser_ice_steel_128.png"),
         os.path.expanduser("~/.tarball-installations/zen/browser/chrome/icons/default/default128.png"),
         os.path.expanduser("~/.tarball-installations/zen/icons/updater.png"),
         "/usr/share/icons/hicolor/128x128/apps/zen-browser.png",
