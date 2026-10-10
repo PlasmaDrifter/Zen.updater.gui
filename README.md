@@ -6,9 +6,9 @@ A native desktop update manager, profile launcher, and background notification s
 
 ## Overview
 
-Zen Browser on Linux is frequently distributed as an official portable tarball, but users may also install it via system package managers (DNF, APT, Pacman) or Flatpak. This repository provides an end-to-end management suite:
+Zen Browser provides official portable Linux tarballs from GitHub, but users often also have existing installations from distro package managers (DNF, APT, Pacman) or Flatpak. This tool is a complete management suite for the official portable release, with built-in safeguards to detect and coexist with existing system or Flatpak installations:
 
-1. **Zen Updater GUI (`zen_updater_gui.py`)**: A native PyQt6 desktop application to inspect releases, create safety snapshots, apply updates, manage system/flatpak profile migration, and launch multi-profile browser workflows.
+1. **Zen Updater GUI (`zen_updater_gui.py`)**: A native PyQt6 desktop application to inspect official releases, create safety snapshots, download and update the portable browser, guide profile mitigation from existing Flatpak/system installs, and launch multi-profile browser workflows.
 2. **Safe Update Engine (`update_zen.sh`)**: A bash script that gracefully closes running instances, snapshots profile databases, fetches official release tarballs directly from GitHub, and restores custom profile binary hardlinks.
 3. **Background Update Checker (`check_zen_update.sh`)**: A lightweight background monitor triggered by systemd that queries GitHub releases, sends non-intrusive desktop notifications when updates are available, and tracks notification IDs to prevent notification spam.
 
