@@ -2065,18 +2065,23 @@ class ZenUpdaterWindow(QMainWindow):
                 self.btn_run.setText("Reinstall Portable")
                 self.btn_run.setStyleSheet("""
                 QPushButton {
-                    background-color: rgba(248, 81, 73, 0.12);
+                    background-color: #21262d;
                     color: #ff7b72;
                     font-weight: bold;
                     font-size: 12px;
-                    border: 1px solid #f85149;
+                    border: 1px solid #da3633;
                     border-radius: 5px;
                     padding: 6px 18px;
                 }
                 QPushButton:hover {
-                    background-color: rgba(248, 81, 73, 0.22);
+                    background-color: #30363d;
                     color: #ffa198;
-                    border-color: #ff7b72;
+                    border-color: #f85149;
+                }
+                QPushButton:disabled {
+                    background-color: #21262d;
+                    color: #6e7681;
+                    border-color: #30363d;
                 }
                 """)
                 self.btn_run.setEnabled(True)
@@ -2146,18 +2151,18 @@ class ZenUpdaterWindow(QMainWindow):
             self.btn_run.setText("Reinstall")
             self.btn_run.setStyleSheet("""
             QPushButton {
-                background-color: rgba(248, 81, 73, 0.12);
+                background-color: #21262d;
                 color: #ff7b72;
                 font-weight: bold;
                 font-size: 12px;
-                border: 1px solid #f85149;
+                border: 1px solid #da3633;
                 border-radius: 5px;
                 padding: 6px 18px;
             }
             QPushButton:hover {
-                background-color: rgba(248, 81, 73, 0.22);
+                background-color: #30363d;
                 color: #ffa198;
-                border-color: #ff7b72;
+                border-color: #f85149;
             }
             QPushButton:disabled {
                 background-color: #21262d;
