@@ -1432,18 +1432,17 @@ class ZenUpdaterWindow(QMainWindow):
         controls_layout.addWidget(lbl_interval)
 
         self.combo_timer_interval = QComboBox()
-        self.combo_timer_interval.addItem("Every 2 hours", "2h")
         self.combo_timer_interval.addItem("Every 4 hours", "4h")
-        self.combo_timer_interval.addItem("Every 6 hours (Default)", "6h")
         self.combo_timer_interval.addItem("Every 12 hours", "12h")
-        self.combo_timer_interval.addItem("Every 24 hours / Daily", "24h")
+        self.combo_timer_interval.addItem("Daily (Every 24 hours)", "24h")
+        self.combo_timer_interval.addItem("Weekly (Every 7 days)", "7d")
 
-        cur_int = self.timer_status.get("interval", "6h")
+        cur_int = self.timer_status.get("interval", "12h")
         idx = self.combo_timer_interval.findData(cur_int)
         if idx >= 0:
             self.combo_timer_interval.setCurrentIndex(idx)
         else:
-            self.combo_timer_interval.setCurrentIndex(2)
+            self.combo_timer_interval.setCurrentIndex(1)
 
         self.combo_timer_interval.currentIndexChanged.connect(self.on_timer_interval_changed)
         controls_layout.addWidget(self.combo_timer_interval)
