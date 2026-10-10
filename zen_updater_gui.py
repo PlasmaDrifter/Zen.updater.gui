@@ -2237,15 +2237,27 @@ class ZenUpdaterWindow(QMainWindow):
                 "Do you want to proceed?"
             )
 
-        reply = QMessageBox.question(
-            self,
-            "Confirm Installation / Update",
-            confirm_msg,
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.Yes
-        )
-        if reply != QMessageBox.StandardButton.Yes:
-            return
+        suppress_confirm = bool(load_app_settings().get("suppress_update_confirmation", False))
+        if not suppress_confirm:
+            msg_box = QMessageBox(self)
+            msg_box.setWindowTitle("Confirm Installation / Update")
+            msg_box.setText(confirm_msg)
+            msg_box.setIcon(QMessageBox.Icon.Question)
+            msg_box.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+            msg_box.setDefaultButton(QMessageBox.StandardButton.Yes)
+
+            chk_dont_show = QCheckBox("Do not show this warning again")
+            chk_dont_show.setCursor(Qt.CursorShape.PointingHandCursor)
+            chk_dont_show.setStyleSheet(get_checkbox_qss())
+            msg_box.setCheckBox(chk_dont_show)
+
+            reply = msg_box.exec()
+            if reply != QMessageBox.StandardButton.Yes:
+                return
+
+            if chk_dont_show.isChecked():
+                save_app_setting("suppress_update_confirmation", True)
+                self.append_log("\n[Settings] Pre-update confirmation warning permanently disabled.\n")
 
         self.btn_refresh.setEnabled(False)
         self.btn_run.setEnabled(False)
