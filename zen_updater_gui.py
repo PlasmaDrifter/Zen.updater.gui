@@ -835,7 +835,7 @@ class CheckAppReleaseWorker(QThread):
             }
         )
         try:
-            with urllib.request.urlopen(req, timeout=8) as resp:
+            with urllib.request.urlopen(req, timeout=4) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
                 latest_tag = data.get("tag_name", "").strip()
                 result["latest_version"] = latest_tag
