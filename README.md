@@ -2,6 +2,18 @@
 
 A native desktop update manager, profile launcher, and background notification service for Zen Browser on Linux.
 
+---
+
+## Overview
+
+Zen Browser on Linux is frequently distributed as an official portable tarball, but users may also install it via system package managers (DNF, APT, Pacman) or Flatpak. This repository provides an end-to-end management suite:
+
+1. **Zen Updater GUI (`zen_updater_gui.py`)**: A native PyQt6 desktop application to inspect releases, create safety snapshots, apply updates, manage system/flatpak profile migration, and launch multi-profile browser workflows.
+2. **Safe Update Engine (`update_zen.sh`)**: A bash script that gracefully closes running instances, snapshots profile databases, fetches official release tarballs directly from GitHub, and restores custom profile binary hardlinks.
+3. **Background Update Checker (`check_zen_update.sh`)**: A lightweight background monitor triggered by systemd that queries GitHub releases, sends non-intrusive desktop notifications when updates are available, and tracks notification IDs to prevent notification spam.
+
+---
+
 ### Application Overview
 
 <p align="center">
@@ -18,19 +30,9 @@ A native desktop update manager, profile launcher, and background notification s
   <img src="assets/repo1.png" alt="System Package Detected" width="480">
 </p>
 
-| Flatpak & Migration Notice | External Profile Launch Safeguards |
+| Profile Mitigation | External Profile Launch Safeguards |
 | :---: | :---: |
-| <img src="assets/repo2.png" alt="Flatpak / Migration Notice" width="420"> | <img src="assets/repo3.png" alt="External Profile Launch Safeguards" width="420"> |
-
----
-
-## Overview
-
-Zen Browser on Linux is frequently distributed as an official portable tarball, but users may also install it via system package managers (DNF, APT, Pacman) or Flatpak. This repository provides an end-to-end management suite:
-
-1. **Zen Updater GUI (`zen_updater_gui.py`)**: A native PyQt6 desktop application to inspect releases, create safety snapshots, apply updates, manage system/flatpak profile migration, and launch multi-profile browser workflows.
-2. **Safe Update Engine (`update_zen.sh`)**: A bash script that gracefully closes running instances, snapshots profile databases, fetches official release tarballs directly from GitHub, and restores custom profile binary hardlinks.
-3. **Background Update Checker (`check_zen_update.sh`)**: A lightweight background monitor triggered by systemd that queries GitHub releases, sends non-intrusive desktop notifications when updates are available, and tracks notification IDs to prevent notification spam.
+| <img src="assets/repo2.png" alt="Profile Mitigation" width="420"> | <img src="assets/repo3.png" alt="External Profile Launch Safeguards" width="420"> |
 
 ---
 
