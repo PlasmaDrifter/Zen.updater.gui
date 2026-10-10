@@ -122,6 +122,15 @@ The installer will:
    systemctl --user enable --now zen-update-check.timer
    ```
 
+### Uninstallation
+
+To remove all scripts, desktop launchers, icons, and background timers, run:
+
+```bash
+chmod +x uninstall.sh
+./uninstall.sh
+```
+
 ---
 
 ## Usage
