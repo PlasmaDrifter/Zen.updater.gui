@@ -39,7 +39,6 @@ Zen Browser on Linux is frequently distributed as an official portable tarball, 
 ## Features
 
 - **Direct GitHub Releases Tracking**: Queries GitHub's official release endpoint directly to obtain authoritative version metadata without API rate limits.
-- **Side-by-Side Version Card**: Immediate visual comparison of the currently installed version against the latest available release, including release dates.
 - **Installation Type Detection & Safeguards**:
   - Automatically identifies whether Zen Browser is installed as a **portable tarball**, **system repository package**, or **Flatpak**.
   - If installed via repository package manager, informs the user and provides a safe opt-in mechanism to install a parallel portable version.
@@ -50,9 +49,6 @@ Zen Browser on Linux is frequently distributed as an official portable tarball, 
   - Passes `--allow-downgrade` and appropriate profile flags so portable Zen can safely load existing Flatpak profiles without database locks or version schema warnings.
   - Integrates with dedicated desktop launchers (`.desktop` files) for custom isolated web apps.
   - Launches selected profiles with a 250ms stagger to prevent Wayland/X11 socket collisions.
-- **Accordion Navigation & Smooth Scroll Container**:
-  - Features single-section expansion (accordion behavior) so opening one card cleanly collapses others.
-  - Wrapped inside a custom dark-styled `QScrollArea` with locked scrollbar tracking to eliminate horizontal content shifting across screen resolutions and DPI scaling.
 - **Integrated Systemd Background Timer Management**:
   - Configure, enable, or disable periodic background update checks directly in the GUI without touching a terminal.
   - Set custom intervals: **Every 4 hours**, **Every 12 hours**, **Daily (Every 24 hours - Default)**, or **Weekly (Every 7 days)**.
@@ -61,17 +57,6 @@ Zen Browser on Linux is frequently distributed as an official portable tarball, 
 - **Desktop Notification Integration & Auto-Dismissal**:
   - Background checks issue desktop notifications via `notify-send`.
   - Opening the Updater GUI or running an update sends a DBus `CloseNotification` signal, immediately clearing stale alerts from your notification center.
-- **Isolated Profile Binary Re-linking**:
-  - After unpacking new Zen binaries, the engine dynamically discovers and refreshes binary hardlinks (such as `zen-youtube` or `qbittorrent-webui`), preserving taskbar pins, application classes, and custom dock icons.
-- **Zen Updater Self-Updater**:
-  - Dedicated expandable card to inspect and install updates to the updater itself directly from GitHub Releases.
-  - Optional automatic startup check (disabled by default) that displays a prominent update badge in the header next to the title.
-  - 4-second timeout with completely silent fallback so network latency never stalls the interface.
-  - One-click update with seamless in-place restart via `os.execv`.
-- **Fully Portable Across Any Linux Setup**:
-  - No hardcoded usernames, home directories, or distro-specific paths.
-  - Dedicated custom Ice Steel application icon for Zen Updater.
-  - Dynamically self-locates companion scripts regardless of where the repository is cloned.
 
 ---
 
