@@ -6,9 +6,9 @@ A native desktop update manager, profile launcher, and background notification s
 
 ## Overview
 
-Zen Browser provides official portable Linux tarballs from GitHub, but users often also have existing installations from distro package managers (DNF, APT, Pacman) or Flatpak. This tool is a complete management suite for the official portable release, with built-in safeguards to detect and coexist with existing system or Flatpak installations:
+Zen Browser provides official portable Linux tarballs from GitHub, but users often have existing installations from distro package managers (DNF, APT, Pacman) or Flatpak. This tool provides an end-to-end management suite for the official portable release, with built-in profile mitigation so you can safely uninstall Flatpak or repository versions while keeping and continuing to use all your existing profiles with the portable release:
 
-1. **Zen Updater GUI (`zen_updater_gui.py`)**: A native PyQt6 desktop application to inspect official releases, create safety snapshots, download and update the portable browser, guide profile mitigation from existing Flatpak/system installs, and launch multi-profile browser workflows.
+1. **Zen Updater GUI (`zen_updater_gui.py`)**: A native PyQt6 desktop application to inspect official releases, create safety snapshots, download and update the portable browser, guide profile migration from existing Flatpak/system installs, and launch multi-profile browser workflows.
 2. **Safe Update Engine (`update_zen.sh`)**: A bash script that gracefully closes running instances, snapshots profile databases, fetches official release tarballs directly from GitHub, and restores custom profile binary hardlinks.
 3. **Background Update Checker (`check_zen_update.sh`)**: A lightweight background monitor triggered by systemd that queries GitHub releases, sends non-intrusive desktop notifications when updates are available, and tracks notification IDs to prevent notification spam.
 
@@ -39,13 +39,13 @@ Zen Browser provides official portable Linux tarballs from GitHub, but users oft
 ## Features
 
 - **Direct GitHub Releases Tracking**: Queries GitHub's official release endpoint directly to obtain authoritative version metadata without API rate limits.
-- **Installation Type Detection & Safeguards**:
+- **Installation Type Detection & Migration Safeguards**:
   - Automatically identifies whether Zen Browser is installed as a **portable tarball**, **system repository package**, or **Flatpak**.
-  - If installed via repository package manager, informs the user and provides a safe opt-in mechanism to install a parallel portable version.
+  - If installed via repository package manager or Flatpak, informs the user so they can switch to the official portable release and safely remove the distro/flatpak package without losing browser data.
 - **Pre-Update Profile Safety Snapshot**: Automatically archives the portable browser's profile directory (`~/.zen`) using multi-threaded `zstd` compression prior to updating, while intelligently excluding volatile browser caches (`cache2`, `startupCache`, remote settings, disposable site icon caches, and crash logs) to keep snapshots fast and lightweight (~300 MB). Automatically maintains a rolling 2-backup rotation in `~/.zen-backups/`.
 - **Multi-Profile Launching & Profile Mitigation**:
   - Dynamically discovers all configured profiles across portable directories (`~/.zen/profiles.ini`), system/XDG package directories (`~/.config/zen/profiles.ini`), and Flatpak sandbox paths (`~/.var/app/...`).
-  - Automatically flags external profiles with `[Flatpak]` badges and provides a built-in **Profile Mitigation** guide to help users migrate or share bookmarks, extensions, and sessions between distro/flatpak installs and portable Zen.
+  - Automatically flags external profiles with `[Flatpak]` badges and provides a built-in **Profile Mitigation** guide to help users seamlessly transition their bookmarks, extensions, and sessions to the portable version, allowing previous distro/flatpak versions to be uninstalled.
   - Passes `--allow-downgrade` and appropriate profile flags so portable Zen can safely load existing external profiles without database locks or version schema warnings.
   - Integrates with dedicated desktop launchers (`.desktop` files) for custom isolated web apps.
   - Launches selected profiles with a 250ms stagger to prevent Wayland/X11 socket collisions.
@@ -135,14 +135,17 @@ chmod +x uninstall.sh
 
 ## Profile Management & Migration
 
-When installing the portable version of Zen Browser on a system that previously ran a Flatpak or Linux distribution package, Zen creates a fresh profile registry for the portable binary. The Updater GUI automatically detects all existing profiles across installations.
+If you previously used Zen Browser from Flatpak or a Linux distribution package repository, you can safely uninstall those packages. Your bookmarks, extensions, history, and logins remain stored on your system and can continue to be used seamlessly by the official portable release:
 
-### Setting Your Previous Profile as Default
+- **Flatpak profiles** are kept in `~/.var/app/app.zen_browser.zen/` (or `~/.var/app/io.github.zen_browser.zen/`). Even when you run `flatpak uninstall app.zen_browser.zen`, Flatpak does not delete user data unless `--delete-data` is explicitly passed.
+- **System package profiles** are kept in `~/.config/zen/`. Removing packages via `dnf`, `apt`, or `pacman` does not touch user profile directories in your home folder.
 
-1. **Launch the Profile**: In the Zen Updater GUI, expand **Launch Profiles**, check your existing profile (e.g. `Default Profile [Flatpak]`), and click **Launch Zen**.
+### Using Your Existing Profile in Portable Zen
+
+1. **Launch the Profile**: In the Zen Updater GUI, expand **Launch Profiles**, select your existing profile (e.g. `Default Profile [Flatpak]`), and click **Launch Zen**.
 2. **Open Profile Manager**: In the Zen address bar, navigate to `about:profiles`.
 3. **Set as Default**: Find your preferred profile in the list and click **Set as default profile**.
-4. Zen will now open directly into your profile whenever launched from desktop shortcuts or application menus.
+4. Zen portable will now open directly into your profile whenever launched from desktop shortcuts or application menus. Once set, you can safely remove the old Flatpak or distro package from your system.
 
 ---
 
