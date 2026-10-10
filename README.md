@@ -42,11 +42,11 @@ Zen Browser provides official portable Linux tarballs from GitHub, but users oft
 - **Installation Type Detection & Safeguards**:
   - Automatically identifies whether Zen Browser is installed as a **portable tarball**, **system repository package**, or **Flatpak**.
   - If installed via repository package manager, informs the user and provides a safe opt-in mechanism to install a parallel portable version.
-- **Pre-Update Profile Safety Snapshot**: Automatically archives `~/.zen` using multi-threaded `zstd` compression prior to updating, while intelligently excluding volatile browser caches (`cache2`, `startupCache`, remote settings, disposable site icon caches, and crash logs) to keep snapshots fast and lightweight (~300 MB). Automatically maintains a rolling 2-backup rotation in `~/.zen-backups/`.
-- **Multi-Profile Launching & Flatpak Profile Migration**:
-  - Dynamically discovers all configured profiles across both portable registries (`~/.zen/profiles.ini`) and Flatpak / system registries (`~/.var/app/io.github.zen_browser.zen/data/zen/`).
-  - Automatically flags external profiles with `[Flatpak]` badges and displays an interactive **Migration Guide** with step-by-step instructions.
-  - Passes `--allow-downgrade` and appropriate profile flags so portable Zen can safely load existing Flatpak profiles without database locks or version schema warnings.
+- **Pre-Update Profile Safety Snapshot**: Automatically archives the portable browser's profile directory (`~/.zen`) using multi-threaded `zstd` compression prior to updating, while intelligently excluding volatile browser caches (`cache2`, `startupCache`, remote settings, disposable site icon caches, and crash logs) to keep snapshots fast and lightweight (~300 MB). Automatically maintains a rolling 2-backup rotation in `~/.zen-backups/`.
+- **Multi-Profile Launching & Profile Mitigation**:
+  - Dynamically discovers all configured profiles across portable directories (`~/.zen/profiles.ini`), system/XDG package directories (`~/.config/zen/profiles.ini`), and Flatpak sandbox paths (`~/.var/app/...`).
+  - Automatically flags external profiles with `[Flatpak]` badges and provides a built-in **Profile Mitigation** guide to help users migrate or share bookmarks, extensions, and sessions between distro/flatpak installs and portable Zen.
+  - Passes `--allow-downgrade` and appropriate profile flags so portable Zen can safely load existing external profiles without database locks or version schema warnings.
   - Integrates with dedicated desktop launchers (`.desktop` files) for custom isolated web apps.
   - Launches selected profiles with a 250ms stagger to prevent Wayland/X11 socket collisions.
 - **Integrated Systemd Background Timer Management**:
