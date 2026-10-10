@@ -4,9 +4,9 @@ A native desktop update manager, profile launcher, and background notification s
 
 ### Application Overview
 
-| Default View |
-| :---: |
-| <img src="assets/1.png" alt="Zen Browser Updater - Default View" width="480"> |
+<p align="center">
+  <img src="assets/1.png" alt="Zen Browser Updater - Default View" width="480">
+</p>
 
 | Expanded Sections | Self-Updater & Timer |
 | :---: | :---: |
@@ -14,9 +14,9 @@ A native desktop update manager, profile launcher, and background notification s
 
 ### Repository & Package Detection
 
-| System Repository Detection |
-| :---: |
-| <img src="assets/repo1.png" alt="System Package Detected" width="480"> |
+<p align="center">
+  <img src="assets/repo1.png" alt="System Package Detected" width="480">
+</p>
 
 | Flatpak & Migration Notice | External Profile Launch Safeguards |
 | :---: | :---: |
