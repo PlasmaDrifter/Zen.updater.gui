@@ -567,7 +567,7 @@ class ZenTimerManager:
             "installed": os.path.isfile(self.timer_path),
             "active": False,
             "enabled": False,
-            "interval": "6h",
+            "interval": "24h",
             "next_run": "Unknown"
         }
         if not self.has_systemctl:
@@ -639,7 +639,7 @@ class ZenTimerManager:
             with open(self.service_path, "w", encoding="utf-8") as f:
                 f.write(content)
 
-    def write_timer_file(self, interval="6h"):
+    def write_timer_file(self, interval="24h"):
         """Writes the timer file with the chosen interval."""
         os.makedirs(self.systemd_dir, exist_ok=True)
         content = (
@@ -655,7 +655,7 @@ class ZenTimerManager:
         with open(self.timer_path, "w", encoding="utf-8") as f:
             f.write(content)
 
-    def set_timer(self, enabled=True, interval="6h"):
+    def set_timer(self, enabled=True, interval="24h"):
         """Configures and starts/stops the systemd user timer."""
         if not self.has_systemctl:
             return False, "systemctl is not available on this system."
@@ -1437,12 +1437,12 @@ class ZenUpdaterWindow(QMainWindow):
         self.combo_timer_interval.addItem("Daily (Every 24 hours)", "24h")
         self.combo_timer_interval.addItem("Weekly (Every 7 days)", "7d")
 
-        cur_int = self.timer_status.get("interval", "12h")
+        cur_int = self.timer_status.get("interval", "24h")
         idx = self.combo_timer_interval.findData(cur_int)
         if idx >= 0:
             self.combo_timer_interval.setCurrentIndex(idx)
         else:
-            self.combo_timer_interval.setCurrentIndex(1)
+            self.combo_timer_interval.setCurrentIndex(2)
 
         self.combo_timer_interval.currentIndexChanged.connect(self.on_timer_interval_changed)
         controls_layout.addWidget(self.combo_timer_interval)

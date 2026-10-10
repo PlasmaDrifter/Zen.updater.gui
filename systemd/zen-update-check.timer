@@ -1,9 +1,9 @@
 [Unit]
-Description=Check Zen Browser for Updates every 6 hours
+Description=Check Zen Browser for Updates Daily (Every 24 hours)
 
 [Timer]
 OnBootSec=5min
-OnUnitActiveSec=6h
+OnUnitActiveSec=24h
 Persistent=true
 
 [Install]
