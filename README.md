@@ -145,13 +145,6 @@ zen-updater
 python3 zen_updater_gui.py
 ```
 
-- Click **Refresh** to manually check for the latest release.
-- Click **Run Update** to close running browser processes, create a profile safety snapshot, and install the latest tarball.
-- Click **Launch Zen** to launch your default profile and all checked secondary profiles.
-- Click **Launch Profiles** to expand the profile selection grid and manage profile migration. Profile choices persist in `~/.config/zen-updater/settings.json`.
-- Click **Background Auto-Check** to expand the timer settings card. Toggle background checks on/off, choose how frequently to check (4h, 12h, Daily, Weekly), view live timer countdown status, or click **Test Check Now** to verify notifications immediately.
-- Click **Zen Updater Updates** to check for and apply updates to the Zen Updater application itself.
-
 ### 2. Running the Update Engine Standalone (CLI)
 
 The core updater can be executed without the GUI in scripts or terminal sessions:
