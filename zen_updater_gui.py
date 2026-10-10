@@ -1604,26 +1604,6 @@ class ZenUpdaterWindow(QMainWindow):
         self.btn_apply_app_update.clicked.connect(self.run_apply_app_update)
         app_btn_layout.addWidget(self.btn_apply_app_update)
 
-        self.btn_test_app_badge = QPushButton("Test Badge")
-        self.btn_test_app_badge.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.btn_test_app_badge.setToolTip("Toggle the header update badge to preview its appearance")
-        self.btn_test_app_badge.setStyleSheet("""
-            QPushButton {
-                background-color: #21262d;
-                border: 1px solid #30363d;
-                border-radius: 6px;
-                color: #8b949e;
-                font-size: 11px;
-                padding: 6px 10px;
-            }
-            QPushButton:hover {
-                background-color: #30363d;
-                color: #c9d1d9;
-            }
-        """)
-        self.btn_test_app_badge.clicked.connect(self.toggle_test_app_badge)
-        app_btn_layout.addWidget(self.btn_test_app_badge)
-
         app_btn_layout.addStretch()
         app_update_layout.addLayout(app_btn_layout)
 
@@ -1806,20 +1786,6 @@ class ZenUpdaterWindow(QMainWindow):
         if not self.app_update_expanded:
             self.toggle_app_update_expanded()
         self.btn_apply_app_update.setFocus()
-
-    def toggle_test_app_badge(self):
-        if self.badge_app_update.isVisible():
-            self.badge_app_update.setVisible(False)
-            self.lbl_app_update_status.setText("Test badge hidden.")
-            self.btn_apply_app_update.setEnabled(False)
-        else:
-            self.badge_app_update.setText("Update Available (v1.0.5)")
-            self.badge_app_update.setVisible(True)
-            self.lbl_app_lat_ver.setText("v1.0.5 (Released: Oct 09, 2026)")
-            self.lbl_app_update_status.setText("Test update simulated: Header badge is now visible to the right of the version number.")
-            self.btn_apply_app_update.setEnabled(True)
-            self.app_update_info = {"has_update": True, "latest_version": "v1.0.5"}
-            self.update_app_update_toggle_text()
 
     def start_app_update_check(self, silent=False):
         if self.app_check_worker and self.app_check_worker.isRunning():
