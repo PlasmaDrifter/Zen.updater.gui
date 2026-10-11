@@ -71,16 +71,25 @@ fi
 echo -e "Current installed version: ${BOLD}${CURRENT_VER}${NC}"
 
 echo -e "\nChecking latest version from GitHub..."
-LATEST_VER=$(curl -sIL -o /dev/null -w '%{url_effective}' "https://github.com/zen-browser/desktop/releases/latest" 2>/dev/null | sed 's#.*/##' | tr -d '[:space:]' || true)
+LATEST_VER=""
+EFFECTIVE_URL=$(curl -fsIL --connect-timeout 5 --max-time 10 -o /dev/null -w '%{url_effective}' "https://github.com/zen-browser/desktop/releases/latest" 2>/dev/null || true)
+if [[ "${EFFECTIVE_URL}" == *"/releases/tag/"* ]]; then
+    LATEST_VER="${EFFECTIVE_URL##*/}"
+fi
 
 if [ -z "${LATEST_VER}" ]; then
-    UPDATE_XML=$(curl -s --max-time 10 "https://updates.zen-browser.app/updates/browser/Linux_x86_64-gcc3/release/update.xml" || true)
+    UPDATE_XML=$(curl -fs --connect-timeout 5 --max-time 10 "https://updates.zen-browser.app/updates/browser/Linux_x86_64-gcc3/release/update.xml" 2>/dev/null || true)
     LATEST_VER=$(echo "${UPDATE_XML}" | sed -n 's/.*displayVersion="\([^"]*\)".*/\1/p' | head -n1 | tr -d '[:space:]')
 fi
 
 if [ -z "${LATEST_VER}" ]; then
     echo -e "${YELLOW}Could not fetch version from redirect or update.xml, checking GitHub API...${NC}"
-    LATEST_VER=$(curl -s https://api.github.com/repos/zen-browser/desktop/releases/latest | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/' | tr -d '[:space:]' || true)
+    LATEST_VER=$(curl -fs --connect-timeout 5 --max-time 10 https://api.github.com/repos/zen-browser/desktop/releases/latest 2>/dev/null | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/' | tr -d '[:space:]' || true)
+fi
+
+if [ -z "${LATEST_VER}" ] || [ "${LATEST_VER}" = "latest" ]; then
+    echo -e "${RED}Error: Could not determine latest version. Please check your internet connection.${NC}"
+    exit 1
 fi
 
 echo -e "Latest available version : ${BOLD}${LATEST_VER}${NC}"

@@ -25,7 +25,7 @@ from PyQt6.QtWidgets import (
     QMessageBox, QGridLayout, QCheckBox, QScrollArea, QComboBox, QToolTip
 )
 
-APP_VERSION = "v1.0.7"
+APP_VERSION = "v1.0.8"
 APP_REPO = "PlasmaDrifter/Zen.updater.gui"
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -761,9 +761,10 @@ class CheckVersionWorker(QThread):
                     "https://github.com/zen-browser/desktop/releases/latest",
                     headers=headers
                 )
-                with urllib.request.urlopen(redirect_req, timeout=10) as resp:
                     final_url = resp.geturl()
-                    latest_tag = final_url.rstrip("/").split("/")[-1]
+                    tag = final_url.rstrip("/").split("/")[-1]
+                    if tag and tag != "latest":
+                        latest_tag = tag
             except Exception:
                 pass
 

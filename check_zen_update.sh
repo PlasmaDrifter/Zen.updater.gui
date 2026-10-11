@@ -24,15 +24,20 @@ done
 CURRENT_VER=$(grep "^Version=" "${APP_INI}" | cut -d'=' -f2 | tr -d '[:space:]')
 
 # Fetch latest release directly from GitHub redirect (authoritative tarball source, no API rate limits)
-LATEST_VER=$(curl -sIL -o /dev/null -w '%{url_effective}' "https://github.com/zen-browser/desktop/releases/latest" 2>/dev/null | sed 's#.*/##' | tr -d '[:space:]' || true)
+LATEST_VER=""
+EFFECTIVE_URL=$(curl -fsIL --connect-timeout 5 --max-time 10 -o /dev/null -w '%{url_effective}' "https://github.com/zen-browser/desktop/releases/latest" 2>/dev/null || true)
+if [[ "${EFFECTIVE_URL}" == *"/releases/tag/"* ]]; then
+    LATEST_VER="${EFFECTIVE_URL##*/}"
+fi
 
 # Fallback to update.xml if GitHub redirect fails
 if [ -z "${LATEST_VER}" ]; then
-    UPDATE_XML=$(curl -s --max-time 10 "https://updates.zen-browser.app/updates/browser/Linux_x86_64-gcc3/release/update.xml" || true)
+    UPDATE_XML=$(curl -fs --connect-timeout 5 --max-time 10 "https://updates.zen-browser.app/updates/browser/Linux_x86_64-gcc3/release/update.xml" 2>/dev/null || true)
     LATEST_VER=$(echo "${UPDATE_XML}" | sed -n 's/.*displayVersion="\([^"]*\)".*/\1/p' | head -n1 | tr -d '[:space:]')
 fi
 
-if [ -n "${LATEST_VER}" ] && [ "${LATEST_VER}" != "${CURRENT_VER}" ]; then
+# Only proceed if we obtained a valid version string that differs from 'latest' and CURRENT_VER
+if [ -n "${LATEST_VER}" ] && [ "${LATEST_VER}" != "latest" ] && [ "${LATEST_VER}" != "${CURRENT_VER}" ]; then
     export DISPLAY="${DISPLAY:-:0}"
     export WAYLAND_DISPLAY="${WAYLAND_DISPLAY:-wayland-0}"
     export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
