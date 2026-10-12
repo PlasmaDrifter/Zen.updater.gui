@@ -54,6 +54,9 @@ if [ -f "${SCRIPT_DIR}/assets/icon.png" ]; then
     cp -f "${SCRIPT_DIR}/assets/icon.png" "${HOME}/.local/share/icons/zen-updater.png"
     cp -f "${SCRIPT_DIR}/assets/icon.png" "${ICONS_DIR}/zen-updater.png"
 fi
+if [ -f "${SCRIPT_DIR}/assets/github.svg" ]; then
+    cp -f "${SCRIPT_DIR}/assets/github.svg" "${HOME}/.local/share/icons/zen-updater-github.svg"
+fi
 
 sed "s|Exec=zen_updater_gui.py|Exec=${BIN_DIR}/zen_updater_gui.py|g" \
     "${SCRIPT_DIR}/zen-updater.desktop" > "${APPS_DIR}/zen-updater.desktop"

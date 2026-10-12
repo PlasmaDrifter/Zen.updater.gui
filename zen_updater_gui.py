@@ -17,17 +17,49 @@ import urllib.request
 import urllib.error
 from datetime import datetime
 
-from PyQt6.QtCore import Qt, QThread, pyqtSignal, QProcess, QTimer, QPoint
-from PyQt6.QtGui import QIcon, QFont, QPixmap
+from PyQt6.QtCore import Qt, QThread, pyqtSignal, QProcess, QTimer, QPoint, QUrl, QSize
+from PyQt6.QtGui import QIcon, QFont, QPixmap, QDesktopServices
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QPushButton, QProgressBar, QTextEdit, QFrame, QSizePolicy,
     QMessageBox, QGridLayout, QCheckBox, QScrollArea, QComboBox, QToolTip
 )
 
-APP_VERSION = "v1.0.8"
+APP_VERSION = "v1.0.9"
 APP_REPO = "PlasmaDrifter/Zen.updater.gui"
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+
+
+def get_github_icon():
+    svg_file = os.path.join(SCRIPT_DIR, "assets", "github.svg")
+    if os.path.isfile(svg_file):
+        icon = QIcon(svg_file)
+        if not icon.isNull():
+            return icon
+    installed_svg = os.path.expanduser("~/.local/share/icons/zen-updater-github.svg")
+    if os.path.isfile(installed_svg):
+        icon = QIcon(installed_svg)
+        if not icon.isNull():
+            return icon
+    svg_data = (
+        b'<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#c9d1d9">'
+        b'<path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 '
+        b'0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-'
+        b'.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.'
+        b'105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-'
+        b'.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-'
+        b'1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 '
+        b'5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.'
+        b'57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>'
+    )
+    pm = QPixmap()
+    pm.loadFromData(svg_data, "SVG")
+    if not pm.isNull():
+        return QIcon(pm)
+    theme_icon = QIcon.fromTheme("github", QIcon.fromTheme("git"))
+    if not theme_icon.isNull():
+        return theme_icon
+    return QIcon()
 
 
 def load_app_settings():
@@ -761,6 +793,7 @@ class CheckVersionWorker(QThread):
                     "https://github.com/zen-browser/desktop/releases/latest",
                     headers=headers
                 )
+                with urllib.request.urlopen(redirect_req, timeout=10) as resp:
                     final_url = resp.geturl()
                     tag = final_url.rstrip("/").split("/")[-1]
                     if tag and tag != "latest":
@@ -1546,10 +1579,38 @@ class ZenUpdaterWindow(QMainWindow):
         v_lat_box.setSpacing(2)
         lbl_l_title = QLabel("LATEST RELEASE")
         lbl_l_title.setStyleSheet("color: #8b949e; font-size: 10px; font-weight: bold; border: none; background: transparent;")
+
+        lat_row = QHBoxLayout()
+        lat_row.setSpacing(8)
         self.lbl_app_lat_ver = QLabel("Not checked yet")
         self.lbl_app_lat_ver.setStyleSheet("font-size: 14px; font-weight: bold; color: #58a6ff; border: none; background: transparent;")
+        lat_row.addWidget(self.lbl_app_lat_ver)
+
+        self.btn_app_github = QPushButton()
+        self.btn_app_github.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_app_github.setToolTip("Open release on GitHub")
+        self.btn_app_github.setIcon(get_github_icon())
+        self.btn_app_github.setIconSize(QSize(16, 16))
+        self.btn_app_github.setFixedSize(26, 26)
+        self.btn_app_github.setStyleSheet("""
+            QPushButton {
+                background-color: #21262d;
+                border: 1px solid #30363d;
+                border-radius: 4px;
+                padding: 2px;
+            }
+            QPushButton:hover {
+                background-color: #30363d;
+                border-color: #58a6ff;
+            }
+        """)
+        self.btn_app_github.clicked.connect(self.open_app_github_release)
+        self.btn_app_github.setVisible(False)
+        lat_row.addWidget(self.btn_app_github)
+        lat_row.addStretch()
+
         v_lat_box.addWidget(lbl_l_title)
-        v_lat_box.addWidget(self.lbl_app_lat_ver)
+        v_lat_box.addLayout(lat_row)
 
         ver_info_layout.addLayout(v_cur_box, 1)
         ver_info_layout.addLayout(v_lat_box, 1)
@@ -1606,6 +1667,39 @@ class ZenUpdaterWindow(QMainWindow):
 
         app_btn_layout.addStretch()
         app_update_layout.addLayout(app_btn_layout)
+
+        # Release Notes Frame
+        self.app_notes_frame = QFrame()
+        self.app_notes_frame.setStyleSheet("""
+            QFrame {
+                background-color: #0d1117;
+                border: 1px solid #30363d;
+                border-radius: 6px;
+            }
+        """)
+        notes_vbox = QVBoxLayout(self.app_notes_frame)
+        notes_vbox.setContentsMargins(10, 8, 10, 8)
+        notes_vbox.setSpacing(4)
+
+        lbl_notes_hdr = QLabel("RELEASE NOTES")
+        lbl_notes_hdr.setStyleSheet("color: #8b949e; font-size: 10px; font-weight: bold; border: none; background: transparent;")
+        notes_vbox.addWidget(lbl_notes_hdr)
+
+        self.txt_app_notes = QTextEdit()
+        self.txt_app_notes.setReadOnly(True)
+        self.txt_app_notes.setStyleSheet("""
+            QTextEdit {
+                background: transparent;
+                color: #c9d1d9;
+                font-size: 11px;
+                border: none;
+            }
+        """)
+        self.txt_app_notes.setMaximumHeight(130)
+        notes_vbox.addWidget(self.txt_app_notes)
+
+        self.app_notes_frame.setVisible(False)
+        app_update_layout.addWidget(self.app_notes_frame)
 
         # Status text in card
         self.lbl_app_update_status = QLabel("")
@@ -1800,6 +1894,10 @@ class ZenUpdaterWindow(QMainWindow):
         self.app_check_worker.finished.connect(lambda res: self.on_app_update_check_finished(res, silent))
         self.app_check_worker.start()
 
+    def open_app_github_release(self):
+        url = getattr(self, "app_update_info", {}).get("release_url") or f"https://github.com/{APP_REPO}/releases"
+        QDesktopServices.openUrl(QUrl(url))
+
     def on_app_update_check_finished(self, result, silent):
         self.btn_check_app_update.setEnabled(True)
         self.app_update_info = result
@@ -1808,11 +1906,27 @@ class ZenUpdaterWindow(QMainWindow):
             if not silent:
                 self.lbl_app_lat_ver.setText("Check failed")
                 self.lbl_app_update_status.setText(f"Check failed: {result['error']}")
+                self.btn_app_github.setVisible(False)
+                self.app_notes_frame.setVisible(False)
             return
 
         latest_ver = result["latest_version"]
         pub_date = result["release_date"]
         self.lbl_app_lat_ver.setText(f"{latest_ver} ({pub_date})")
+
+        # GitHub release link button
+        if result.get("release_url"):
+            self.btn_app_github.setVisible(True)
+        else:
+            self.btn_app_github.setVisible(False)
+
+        # Release notes markdown
+        notes = (result.get("body") or "").strip()
+        if notes:
+            self.txt_app_notes.setMarkdown(notes)
+            self.app_notes_frame.setVisible(True)
+        else:
+            self.app_notes_frame.setVisible(False)
 
         if result.get("has_update"):
             self.badge_app_update.setText(f"Update Available ({latest_ver})")
