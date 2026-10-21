@@ -18,14 +18,15 @@ import urllib.error
 from datetime import datetime
 
 from PyQt6.QtCore import Qt, QThread, pyqtSignal, QProcess, QTimer, QPoint, QUrl, QSize
-from PyQt6.QtGui import QIcon, QFont, QPixmap, QDesktopServices
+from PyQt6.QtGui import QIcon, QFont, QPixmap, QDesktopServices, QColor
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QPushButton, QProgressBar, QTextEdit, QFrame, QSizePolicy,
-    QMessageBox, QGridLayout, QCheckBox, QScrollArea, QComboBox, QToolTip
+    QMessageBox, QGridLayout, QCheckBox, QScrollArea, QComboBox, QToolTip,
+    QGraphicsDropShadowEffect
 )
 
-APP_VERSION = "v1.0.9"
+APP_VERSION = "v1.0.10"
 APP_REPO = "PlasmaDrifter/Zen.updater.gui"
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -1253,10 +1254,33 @@ class ZenUpdaterWindow(QMainWindow):
 
         self.btn_launch = QPushButton("Launch Zen")
         self.btn_launch.setMinimumHeight(36)
+        self.btn_launch.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_launch.clicked.connect(self.launch_zen)
+        self.set_launch_button_highlighted(False)
 
         self.btn_refresh = QPushButton("Refresh")
         self.btn_refresh.setMinimumHeight(36)
+        self.btn_refresh.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_refresh.setStyleSheet("""
+            QPushButton {
+                background-color: #21262d;
+                border: 1px solid #30363d;
+                border-radius: 5px;
+                color: #c9d1d9;
+                font-size: 12px;
+                padding: 6px 16px;
+            }
+            QPushButton:hover {
+                background-color: #30363d;
+                color: #ffffff;
+                border-color: #58a6ff;
+            }
+            QPushButton:disabled {
+                background-color: #161b22;
+                color: #484f58;
+                border-color: #21262d;
+            }
+        """)
         self.btn_refresh.clicked.connect(self.start_check)
 
         button_layout.addWidget(self.btn_run)
@@ -1264,6 +1288,59 @@ class ZenUpdaterWindow(QMainWindow):
         button_layout.addStretch()
         button_layout.addWidget(self.btn_refresh)
         main_layout.addLayout(button_layout)
+
+    def set_launch_button_highlighted(self, highlighted):
+        """Sets normal or accented glowing Zen-blue style on the Launch Zen button."""
+        if highlighted:
+            self.btn_launch.setStyleSheet("""
+                QPushButton {
+                    background-color: rgba(56, 139, 253, 0.22);
+                    color: #79c0ff;
+                    font-weight: bold;
+                    font-size: 12px;
+                    border: 1.5px solid #388bfd;
+                    border-radius: 5px;
+                    padding: 6px 18px;
+                }
+                QPushButton:hover {
+                    background-color: #1f6feb;
+                    color: #ffffff;
+                    border-color: #58a6ff;
+                }
+                QPushButton:disabled {
+                    background-color: #161b22;
+                    color: #484f58;
+                    border-color: #21262d;
+                }
+            """)
+            glow = QGraphicsDropShadowEffect(self)
+            glow.setBlurRadius(16)
+            glow.setColor(QColor(56, 139, 253, 200))
+            glow.setOffset(0, 0)
+            self.btn_launch.setGraphicsEffect(glow)
+        else:
+            self.btn_launch.setStyleSheet("""
+                QPushButton {
+                    background-color: #21262d;
+                    color: #c9d1d9;
+                    font-size: 12px;
+                    font-weight: 500;
+                    border: 1px solid #30363d;
+                    border-radius: 5px;
+                    padding: 6px 18px;
+                }
+                QPushButton:hover {
+                    background-color: #30363d;
+                    color: #ffffff;
+                    border-color: #58a6ff;
+                }
+                QPushButton:disabled {
+                    background-color: #161b22;
+                    color: #484f58;
+                    border-color: #21262d;
+                }
+            """)
+            self.btn_launch.setGraphicsEffect(None)
 
         # 6. Expandable Launch Profiles Section
         self.btn_toggle_profiles = QPushButton()
@@ -2377,6 +2454,7 @@ class ZenUpdaterWindow(QMainWindow):
         self.btn_refresh.setEnabled(False)
         self.btn_run.setEnabled(False)
         self.btn_launch.setEnabled(False)
+        self.set_launch_button_highlighted(False)
 
         action_label = "Installing" if install_type == "none" else "Updating"
         self.status_banner.setText(f"{action_label} Zen Browser... Please wait.")
@@ -2489,11 +2567,13 @@ class ZenUpdaterWindow(QMainWindow):
                     border: 1px solid #2a4c3a;
                 }
             """)
+            self.set_launch_button_highlighted(True)
             self.append_log("\n✓ Update complete! You can now launch your Zen profiles.\n")
             if len(self.profiles) > 1:
                 self.append_log("Tip: To make a profile your permanent default, launch it, navigate to\n     about:profiles in the URL bar, and click 'Set as default profile'.\n")
             self.start_check()
         else:
+            self.set_launch_button_highlighted(False)
             self.btn_run.setEnabled(True)
             self.status_banner.setText(f"Update failed with exit code {exit_code}")
             self.status_banner.setStyleSheet("""
@@ -2553,6 +2633,7 @@ class ZenUpdaterWindow(QMainWindow):
         msg_box.exec()
 
     def launch_zen(self):
+        self.set_launch_button_highlighted(False)
         dismiss_zen_notification()
         relinked = self.profile_mgr.sync_profile_binaries()
         if relinked:
