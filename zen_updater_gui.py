@@ -26,7 +26,7 @@ from PyQt6.QtWidgets import (
     QGraphicsDropShadowEffect
 )
 
-APP_VERSION = "v1.0.10"
+APP_VERSION = "v1.0.11"
 APP_REPO = "PlasmaDrifter/Zen.updater.gui"
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -1289,59 +1289,6 @@ class ZenUpdaterWindow(QMainWindow):
         button_layout.addWidget(self.btn_refresh)
         main_layout.addLayout(button_layout)
 
-    def set_launch_button_highlighted(self, highlighted):
-        """Sets normal or accented glowing Zen-blue style on the Launch Zen button."""
-        if highlighted:
-            self.btn_launch.setStyleSheet("""
-                QPushButton {
-                    background-color: rgba(56, 139, 253, 0.22);
-                    color: #79c0ff;
-                    font-weight: bold;
-                    font-size: 12px;
-                    border: 1.5px solid #388bfd;
-                    border-radius: 5px;
-                    padding: 6px 18px;
-                }
-                QPushButton:hover {
-                    background-color: #1f6feb;
-                    color: #ffffff;
-                    border-color: #58a6ff;
-                }
-                QPushButton:disabled {
-                    background-color: #161b22;
-                    color: #484f58;
-                    border-color: #21262d;
-                }
-            """)
-            glow = QGraphicsDropShadowEffect(self)
-            glow.setBlurRadius(16)
-            glow.setColor(QColor(56, 139, 253, 200))
-            glow.setOffset(0, 0)
-            self.btn_launch.setGraphicsEffect(glow)
-        else:
-            self.btn_launch.setStyleSheet("""
-                QPushButton {
-                    background-color: #21262d;
-                    color: #c9d1d9;
-                    font-size: 12px;
-                    font-weight: 500;
-                    border: 1px solid #30363d;
-                    border-radius: 5px;
-                    padding: 6px 18px;
-                }
-                QPushButton:hover {
-                    background-color: #30363d;
-                    color: #ffffff;
-                    border-color: #58a6ff;
-                }
-                QPushButton:disabled {
-                    background-color: #161b22;
-                    color: #484f58;
-                    border-color: #21262d;
-                }
-            """)
-            self.btn_launch.setGraphicsEffect(None)
-
         # 6. Expandable Launch Profiles Section
         self.btn_toggle_profiles = QPushButton()
         self.btn_toggle_profiles.setObjectName("profileToggleBtn")
@@ -1833,6 +1780,59 @@ class ZenUpdaterWindow(QMainWindow):
 
         scroll.setWidget(central)
         self.setCentralWidget(scroll)
+
+    def set_launch_button_highlighted(self, highlighted):
+        """Sets normal or accented glowing Zen-blue style on the Launch Zen button."""
+        if highlighted:
+            self.btn_launch.setStyleSheet("""
+                QPushButton {
+                    background-color: rgba(56, 139, 253, 0.22);
+                    color: #79c0ff;
+                    font-weight: bold;
+                    font-size: 12px;
+                    border: 1.5px solid #388bfd;
+                    border-radius: 5px;
+                    padding: 6px 18px;
+                }
+                QPushButton:hover {
+                    background-color: #1f6feb;
+                    color: #ffffff;
+                    border-color: #58a6ff;
+                }
+                QPushButton:disabled {
+                    background-color: #161b22;
+                    color: #484f58;
+                    border-color: #21262d;
+                }
+            """)
+            glow = QGraphicsDropShadowEffect(self)
+            glow.setBlurRadius(16)
+            glow.setColor(QColor(56, 139, 253, 200))
+            glow.setOffset(0, 0)
+            self.btn_launch.setGraphicsEffect(glow)
+        else:
+            self.btn_launch.setStyleSheet("""
+                QPushButton {
+                    background-color: #21262d;
+                    color: #c9d1d9;
+                    font-size: 12px;
+                    font-weight: 500;
+                    border: 1px solid #30363d;
+                    border-radius: 5px;
+                    padding: 6px 18px;
+                }
+                QPushButton:hover {
+                    background-color: #30363d;
+                    color: #ffffff;
+                    border-color: #58a6ff;
+                }
+                QPushButton:disabled {
+                    background-color: #161b22;
+                    color: #484f58;
+                    border-color: #21262d;
+                }
+            """)
+            self.btn_launch.setGraphicsEffect(None)
 
     def toggle_profiles_expanded(self):
         self.profiles_expanded = not self.profiles_expanded
