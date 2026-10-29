@@ -26,7 +26,7 @@ from PyQt6.QtWidgets import (
     QGraphicsDropShadowEffect
 )
 
-APP_VERSION = "v1.0.11"
+APP_VERSION = "v1.0.12"
 APP_REPO = "PlasmaDrifter/Zen.updater.gui"
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -1174,14 +1174,15 @@ class ZenUpdaterWindow(QMainWindow):
         self.status_banner = QLabel("Checking for updates...")
         self.status_banner.setWordWrap(True)
         self.status_banner.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.status_banner.setMinimumHeight(40)
         self.status_banner.setStyleSheet("""
             QLabel {
-                padding: 8px 12px;
+                padding: 10px 12px;
                 border-radius: 6px;
                 background-color: #2b3a4a;
                 color: #8ac4ff;
                 font-weight: bold;
-                font-size: 12px;
+                font-size: 13px;
                 border: 1px solid #3c526a;
             }
         """)
@@ -2079,12 +2080,12 @@ class ZenUpdaterWindow(QMainWindow):
         self.status_banner.setText("Checking for updates...")
         self.status_banner.setStyleSheet("""
             QLabel {
-                padding: 8px 12px;
+                padding: 10px 12px;
                 border-radius: 6px;
                 background-color: #233549;
                 color: #79b8ff;
                 font-weight: bold;
-                font-size: 12px;
+                font-size: 13px;
                 border: 1px solid #334d69;
             }
         """)
