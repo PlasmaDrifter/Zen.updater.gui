@@ -120,6 +120,18 @@ The installer will:
    systemctl --user enable --now zen-update-check.timer
    ```
 
+### Updating
+
+To update the updater application itself to the latest version:
+
+```bash
+cd Zen.updater.gui
+git pull
+./install.sh
+```
+
+Running `./install.sh` updates the local scripts, icons, desktop entries, and systemd user timer definitions.
+
 ### Uninstallation
 
 To remove all scripts, desktop launchers, icons, and background timers, run:
