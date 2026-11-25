@@ -10,3 +10,5 @@ Terminal=false
 Categories=Network;WebBrowser;Utility;
 Keywords=zen;browser;update;updater;upgrade;
 StartupNotify=true
+StartupWMClass=zen-updater
+X-KDE-Wayland-AppId=zen-updater

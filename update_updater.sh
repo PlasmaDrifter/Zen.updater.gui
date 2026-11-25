@@ -19,15 +19,19 @@ NC='\033[0m'
 
 echo -e "${BLUE}Checking for Zen Updater releases on GitHub...${NC}"
 
-RELEASE_JSON=$(curl -s "https://api.github.com/repos/${REPO}/releases/latest" 2>/dev/null || true)
-if [ -z "${RELEASE_JSON}" ]; then
-    echo -e "${RED}Error: Unable to connect to GitHub releases API.${NC}"
-    exit 1
+LATEST_TAG=""
+EFFECTIVE_URL=$(curl -fsIL --connect-timeout 5 --max-time 10 -o /dev/null -w '%{url_effective}' "https://github.com/${REPO}/releases/latest" 2>/dev/null || true)
+if [[ "${EFFECTIVE_URL}" == *"/releases/tag/"* ]]; then
+    LATEST_TAG="${EFFECTIVE_URL##*/}"
 fi
 
-LATEST_TAG=$(echo "${RELEASE_JSON}" | grep -Po '"tag_name":\s*"\K[^"]*' || true)
 if [ -z "${LATEST_TAG}" ]; then
-    echo -e "${RED}Error: Could not determine latest release tag.${NC}"
+    RELEASE_JSON=$(curl -fs --connect-timeout 5 --max-time 10 "https://api.github.com/repos/${REPO}/releases/latest" 2>/dev/null || true)
+    LATEST_TAG=$(echo "${RELEASE_JSON}" | grep -Po '"tag_name":\s*"\K[^"]*' || true)
+fi
+
+if [ -z "${LATEST_TAG}" ] || [ "${LATEST_TAG}" = "latest" ]; then
+    echo -e "${RED}Error: Unable to determine latest release tag from GitHub.${NC}"
     exit 1
 fi
 
@@ -38,7 +42,7 @@ TMP_DIR=$(mktemp -d)
 trap 'rm -rf "${TMP_DIR}"' EXIT
 
 echo -e "Downloading ${TARBALL_URL}..."
-curl -sSL "${TARBALL_URL}" -o "${TMP_DIR}/release.tar.gz"
+curl -fL "${TARBALL_URL}" -o "${TMP_DIR}/release.tar.gz"
 
 echo "Extracting release files..."
 tar -xzf "${TMP_DIR}/release.tar.gz" -C "${TMP_DIR}"
@@ -50,8 +54,8 @@ if [ -z "${EXTRACTED_DIR}" ] || [ ! -d "${EXTRACTED_DIR}" ]; then
 fi
 
 if [ -f "${EXTRACTED_DIR}/install.sh" ]; then
-    echo "Running installer..."
-    bash "${EXTRACTED_DIR}/install.sh"
+    echo "Running installer upgrade..."
+    bash "${EXTRACTED_DIR}/install.sh" --upgrade
 else
     echo "Updating files in ${BIN_DIR}..."
     mkdir -p "${BIN_DIR}" "${APPS_DIR}" "${ICONS_DIR}"

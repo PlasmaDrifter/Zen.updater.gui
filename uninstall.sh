@@ -11,7 +11,8 @@ APPS_DIR="${HOME}/.local/share/applications"
 ICONS_DIR="${HOME}/.local/share/icons"
 SYSTEMD_DIR="${HOME}/.config/systemd/user"
 CONFIG_DIR="${HOME}/.config/zen-updater"
-CACHE_FILE="${HOME}/.cache/zen_update_notification_id"
+CACHE_DIR="${XDG_CACHE_HOME:-${HOME}/.cache}"
+CACHE_FILE="${CACHE_DIR}/zen_update_notification_id"
 
 echo "Uninstalling Zen Updater Suite..."
 
@@ -32,6 +33,8 @@ rm -f "${SYSTEMD_DIR}/zen-update-check.timer"
 echo "Removing desktop launcher and application icons..."
 rm -f "${APPS_DIR}/zen-updater.desktop"
 rm -f "${ICONS_DIR}/zen-updater.png"
+rm -f "${ICONS_DIR}/zen-updater-github.svg"
+rm -f "${ICONS_DIR}/zen-updater-checkmark.png"
 rm -f "${ICONS_DIR}/hicolor/256x256/apps/zen-updater.png"
 
 if command -v update-desktop-database >/dev/null 2>&1; then
@@ -46,11 +49,12 @@ rm -f "${BIN_DIR}/update_zen.sh"
 rm -f "${BIN_DIR}/check_zen_update.sh"
 rm -f "${BIN_DIR}/update_updater.sh"
 rm -f "${BIN_DIR}/zen_backup.tarignore"
+rm -rf "${BIN_DIR}/assets"
 
-# 4. Remove notification cache
+# 4. Remove notification and icon cache
 rm -f "${CACHE_FILE}"
+rm -rf "${CACHE_DIR}/zen-updater"
 
-# Optional prompt for configuration directory
 if [ -d "${CONFIG_DIR}" ]; then
     echo "Removed application files. Configuration remains in ${CONFIG_DIR}."
     echo "To remove user settings completely, run: rm -rf '${CONFIG_DIR}'"

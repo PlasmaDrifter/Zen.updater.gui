@@ -11,6 +11,15 @@ BIN_DIR="${HOME}/.local/bin"
 APPS_DIR="${HOME}/.local/share/applications"
 SYSTEMD_DIR="${HOME}/.config/systemd/user"
 
+UPGRADE_MODE=false
+for arg in "$@"; do
+    case "${arg}" in
+        --upgrade)
+            UPGRADE_MODE=true
+            ;;
+    esac
+done
+
 echo "Installing Zen Updater Suite..."
 
 # 1. Create target directories
@@ -43,11 +52,14 @@ chmod +x "${BIN_DIR}/update_zen.sh"
 chmod +x "${BIN_DIR}/check_zen_update.sh"
 chmod +x "${BIN_DIR}/update_updater.sh"
 
+# Remove legacy runtime assets folder inside ~/.local/bin if present
+rm -rf "${BIN_DIR}/assets"
+
 # Create handy command symlink: zen-updater
 ln -sf "${BIN_DIR}/zen_updater_gui.py" "${BIN_DIR}/zen-updater"
 
-# 4. Install Application Icon & Desktop Launcher
-echo "Installing application icon and desktop launcher..."
+# 4. Install Application Icons & Desktop Launcher
+echo "Installing application icons and desktop launcher..."
 ICONS_DIR="${HOME}/.local/share/icons/hicolor/256x256/apps"
 mkdir -p "${ICONS_DIR}" "${HOME}/.local/share/icons"
 if [ -f "${SCRIPT_DIR}/assets/icon.png" ]; then
@@ -57,26 +69,35 @@ fi
 if [ -f "${SCRIPT_DIR}/assets/github.svg" ]; then
     cp -f "${SCRIPT_DIR}/assets/github.svg" "${HOME}/.local/share/icons/zen-updater-github.svg"
 fi
+if [ -f "${SCRIPT_DIR}/assets/checkmark.png" ]; then
+    cp -f "${SCRIPT_DIR}/assets/checkmark.png" "${HOME}/.local/share/icons/zen-updater-checkmark.png"
+fi
 
-sed "s|Exec=zen_updater_gui.py|Exec=${BIN_DIR}/zen_updater_gui.py|g" \
-    "${SCRIPT_DIR}/zen-updater.desktop" > "${APPS_DIR}/zen-updater.desktop"
-chmod +x "${APPS_DIR}/zen-updater.desktop"
+if [ "${UPGRADE_MODE}" = false ] || [ ! -f "${APPS_DIR}/zen-updater.desktop" ]; then
+    sed "s|Exec=zen_updater_gui.py|Exec=${BIN_DIR}/zen_updater_gui.py|g" \
+        "${SCRIPT_DIR}/zen-updater.desktop" > "${APPS_DIR}/zen-updater.desktop"
+    chmod +x "${APPS_DIR}/zen-updater.desktop"
+fi
 
 if command -v update-desktop-database >/dev/null 2>&1; then
     update-desktop-database "${APPS_DIR}" >/dev/null 2>&1 || true
 fi
 
-# 5. Install Systemd Background Checker Service & Timer
-echo "Configuring systemd background update check timer..."
+# 5. Install Systemd Background Checker Service & Timer (preserve existing timer configuration on upgrade)
+echo "Configuring systemd background update check service..."
 cp -f "${SCRIPT_DIR}/systemd/zen-update-check.service" "${SYSTEMD_DIR}/zen-update-check.service"
-cp -f "${SCRIPT_DIR}/systemd/zen-update-check.timer" "${SYSTEMD_DIR}/zen-update-check.timer"
 
-systemctl --user daemon-reload
-systemctl --user enable --now zen-update-check.timer
+if [ "${UPGRADE_MODE}" = false ] || [ ! -f "${SYSTEMD_DIR}/zen-update-check.timer" ]; then
+    cp -f "${SCRIPT_DIR}/systemd/zen-update-check.timer" "${SYSTEMD_DIR}/zen-update-check.timer"
+    systemctl --user daemon-reload
+    systemctl --user enable --now zen-update-check.timer
+else
+    systemctl --user daemon-reload
+fi
 
 echo ""
 echo "Installation complete!"
 echo "  - GUI Launcher: Run 'zen-updater' in terminal or launch from your application menu"
 echo "  - Update Script: ${BIN_DIR}/update_zen.sh"
-echo "  - Background Timer: active (checks every 6 hours)"
+echo "  - Background Timer: configured (default: daily / 24h)"
 echo "    Check status with: systemctl --user status zen-update-check.timer"

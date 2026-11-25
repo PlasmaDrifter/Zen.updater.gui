@@ -28,33 +28,35 @@ Zen Browser distributes official portable Linux tarballs directly on GitHub. Thi
   <img src="assets/repo1.png" alt="System Package Detected" width="480">
 </p>
 
-| Profile Mitigation | External Profile Launch Safeguards |
+| Profile Migration | External Profile Launch Safeguards |
 | :---: | :---: |
-| <img src="assets/repo2.png" alt="Profile Mitigation" width="420"> | <img src="assets/repo3.png" alt="External Profile Launch Safeguards" width="420"> |
+| <img src="assets/repo2.png" alt="Profile Migration" width="420"> | <img src="assets/repo3.png" alt="External Profile Launch Safeguards" width="420"> |
 
 ---
 
 ## Features
 
-- **Direct GitHub Releases Tracking**: Queries GitHub's official release endpoint directly to obtain authoritative version metadata without API rate limits.
+- **Direct GitHub Releases Tracking & Release Notes**: Queries GitHub Releases with rate-limit-free redirect and `update.xml` fallbacks, compares semantic versions accurately across architectures (`x86_64` and `aarch64`), and provides an inline **Notes** viewer and GitHub link for Zen Browser releases.
 - **Installation Type Detection & Migration Safeguards**:
-  - Automatically identifies whether Zen Browser is installed as a **portable tarball**, **system repository package**, or **Flatpak**.
+  - Automatically identifies whether Zen Browser is installed as a **portable tarball**, **system repository package**, or **Flatpak** (`app.zen_browser.zen` and `io.github.zen_browser.zen`).
   - If installed via repository package manager or Flatpak, informs the user so they can switch to the official portable release and safely remove the distro/flatpak package without losing browser data.
-- **Pre-Update Profile Safety Snapshot**: Automatically archives the portable browser's profile directory (`~/.zen`) using multi-threaded `zstd` compression prior to updating, while intelligently excluding volatile browser caches (`cache2`, `startupCache`, remote settings, disposable site icon caches, and crash logs) to keep snapshots fast and lightweight (~300 MB). Automatically maintains a rolling 2-backup rotation in `~/.zen-backups/`.
-- **Multi-Profile Launching & Profile Mitigation**:
+- **Safe Staging & Pre-Update Profile Safety Snapshot**:
+  - Downloads and verifies release tarballs before closing running Zen Browser instances, then deploys updates cleanly (`rsync --delete` when available) while preserving `distribution/policies.json` and custom profile hardlinks.
+  - Automatically archives profile directories (`~/.zen` and `~/.config/zen`) using multi-threaded `zstd` compression prior to updating, while excluding volatile browser caches (`cache2`, `startupCache`, remote settings, disposable site icon caches, and crash logs). Includes **Backup Now** and **Backups** buttons in the GUI and maintains a rolling 2-backup rotation in `~/.zen-backups/`.
+- **Multi-Profile Launching & Profile Migration**:
   - Dynamically discovers all configured profiles across portable directories (`~/.zen/profiles.ini`), system/XDG package directories (`~/.config/zen/profiles.ini`), and Flatpak sandbox paths (`~/.var/app/...`).
-  - Automatically flags external profiles with `[Flatpak]` badges and provides a built-in **Profile Mitigation** guide to help users seamlessly transition their bookmarks, extensions, and sessions to the portable version, allowing previous distro/flatpak versions to be uninstalled.
+  - Automatically flags external profiles with `[Flatpak]` badges and provides a built-in **Profile Migration** guide to help users seamlessly transition their bookmarks, extensions, and sessions to the portable version, allowing previous distro/flatpak versions to be uninstalled.
   - Passes `--allow-downgrade` and appropriate profile flags so portable Zen can safely load existing external profiles without database locks or version schema warnings.
-  - Integrates with dedicated desktop launchers (`.desktop` files) for custom isolated web apps.
+  - Integrates with dedicated desktop launchers (`.desktop` files) for custom isolated web apps and refreshes custom profile binaries dynamically.
   - Launches selected profiles with a 250ms stagger to prevent Wayland/X11 socket collisions.
 - **Integrated Systemd Background Timer Management**:
   - Configure, enable, or disable periodic background update checks directly in the GUI without touching a terminal.
   - Set custom intervals: **Every 4 hours**, **Every 12 hours**, **Daily (Every 24 hours - Default)**, or **Weekly (Every 7 days)**.
-  - Live timer status reporting with countdown to the next scheduled check.
-  - On-demand notification verification via the "Test Check Now" button.
-- **Desktop Notification Integration & Auto-Dismissal**:
-  - Background checks issue desktop notifications via `notify-send`.
-  - Opening the Updater GUI or running an update sends a DBus `CloseNotification` signal, immediately clearing stale alerts from your notification center.
+  - Live timer status reporting with accurate countdown to the next scheduled check.
+  - Non-blocking on-demand notification verification via the **Test Check Now** button.
+- **Built-In Self-Updater & Desktop Notification Auto-Dismissal**:
+  - Check for and apply Zen Updater releases directly inside the GUI (or via `update_updater.sh`) while preserving your existing systemd timer interval and custom `.desktop` entry.
+  - Background checks issue desktop notifications via `notify-send`; opening the Updater GUI or running an update sends a DBus `CloseNotification` signal to clear stale alerts.
 
 ---
 
@@ -62,7 +64,7 @@ Zen Browser distributes official portable Linux tarballs directly on GitHub. Thi
 
 - **Linux Distribution**: Any modern Linux desktop (Nobara, Fedora, Arch, Ubuntu, Debian, openSUSE, etc.)
 - **Python**: Python 3.9+ with `PyQt6`
-- **Shell Utilities**: `bash`, `curl`, `tar`, `zstd`, `pgrep`, `pkill`
+- **Shell Utilities**: `bash`, `curl`, `tar`, `zstd`, `pgrep`, `pkill` (`rsync` optional for clean stale-file pruning during upgrades)
 - **Notification Daemon**: Any FreeDesktop-compliant notification daemon (`notify-send`, `dbus`)
 - **Systemd**: For automated user-level background checks
 
@@ -122,15 +124,15 @@ The installer will:
 
 ### Updating
 
-To update the updater application itself to the latest version:
+You can update directly inside the GUI via the **Zen Updater Updates** panel, run `./update_updater.sh`, or pull from git:
 
 ```bash
 cd Zen.updater.gui
 git pull
-./install.sh
+./install.sh --upgrade
 ```
 
-Running `./install.sh` updates the local scripts, icons, desktop entries, and systemd user timer definitions.
+Running `./install.sh --upgrade` updates the local scripts, icons, and systemd service definition while preserving your existing background timer interval and customized desktop entry. (Use `./install.sh` without `--upgrade` to reset the timer and `.desktop` launcher to defaults.)
 
 ### Uninstallation
 
