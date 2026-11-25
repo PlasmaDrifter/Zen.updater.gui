@@ -43,7 +43,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-APP_VERSION = "v1.0.13"
+APP_VERSION = "v1.1.0"
 APP_REPO = "PlasmaDrifter/Zen.updater.gui"
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 
